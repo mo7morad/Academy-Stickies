@@ -1,0 +1,27 @@
+name = "academy-stickies"
+compatibility_date = "2025-06-01"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = "dist"
+
+# --- D1 database ---------------------------------------------------------
+# Create it once with:  wrangler d1 create stickies-db
+# then paste the printed database_id below.
+[[d1_databases]]
+binding = "DB"
+database_name = "stickies-db"
+database_id = "92e8683d-e2e3-4286-8eb0-08826220dc5a"
+
+# --- R2 bucket (avatars + sticky photos) --------------------------------
+# Create it once with:  wrangler r2 bucket create stickies-media
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "stickies-media"
+
+# --- Non-secret vars -----------------------------------------------------
+# NOTE: no SITE_URL here on purpose. Locally it comes from .dev.vars; in
+# production it's intentionally unset so the API falls back to the request
+# origin (your https://<project>.pages.dev link). Secrets (SESSION_SECRET,
+# CF_EMAIL_API_TOKEN, CF_ACCOUNT_ID) go in .dev.vars locally and via
+# `wrangler pages secret put` (see the Makefile) in production.
+[vars]
+EMAIL_FROM_NAME = "Academy Stickies"

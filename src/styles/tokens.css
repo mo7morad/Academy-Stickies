@@ -1,0 +1,166 @@
+/* Design tokens — Hand-Drawn System */
+
+:root {
+  --font-sans: "Patrick Hand", "Kalam", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-heading: "Kalam", "Patrick Hand", -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Type scale */
+  --t-display: 40px;
+  --t-title: 28px;
+  --t-heading: 22px;
+  --t-body: 18px;
+  --t-sub: 16px;
+  --t-small: 14px;
+  --t-tiny: 12px;
+
+  /* Radii - Wobbly (No straight lines) */
+  --r-wobbly-1: 255px 15px 225px 15px / 15px 225px 15px 255px;
+  --r-wobbly-2: 15px 225px 15px 255px / 255px 15px 225px 15px;
+  --r-wobbly-sm: 8px 3px 6px 4px / 4px 6px 3px 8px;
+  --r-pill: 999px; /* Can still use pill for tiny badges if needed */
+
+  /* Spacing */
+  --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
+  --s5: 20px; --s6: 24px; --s8: 32px; --s10: 40px;
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* Hand-Drawn Colors */
+  --canvas: #fdfbf7;      /* Warm Paper */
+  --ink: #2d2d2d;         /* Soft Pencil Black */
+  --ink-2: #2d2d2d;       
+  --ink-3: rgba(45, 45, 45, 0.6); 
+  --ink-muted: #e5e0d8;   /* Old Paper / Erased Pencil */
+  
+  --brand: #ff4d4d;       /* Red Correction Marker */
+  --brand-ink: #fdfbf7;
+  --brand-soft: rgba(255, 77, 77, 0.12);
+  
+  --secondary: #2d5da1;   /* Blue Ballpoint Pen */
+  --secondary-ink: #fdfbf7;
+
+  --border: #2d2d2d;      /* Pencil Lead */
+  --border-strong: #2d2d2d;
+  
+  --accent: #ff4d4d;
+  --danger: #ff4d4d;
+  --success: #16b364;
+
+  --bar: rgba(253, 251, 247, 0.85);
+  --fill: rgba(45, 45, 45, 0.05);
+  --fill-strong: rgba(45, 45, 45, 0.09);
+  --surface: #ffffff;
+  --surface-2: #fdfbf7;
+
+  /* Shadows - Hard Offset */
+  --shadow-sm: 2px 2px 0px 0px var(--ink);
+  --shadow-md: 4px 4px 0px 0px var(--ink);
+  --shadow-lg: 8px 8px 0px 0px var(--ink);
+  --shadow-sticky: 4px 4px 0px 0px var(--ink);
+  --scrim: rgba(45, 45, 45, 0.5);
+
+  /* Sticky paper (Keep current but map to new variables) */
+  --sticky-yellow-top: #fff9c4; --sticky-yellow-bot: #fff176;
+  --sticky-blue-top:   #e3f2fd; --sticky-blue-bot:   #bbdefb;
+  --sticky-green-top:  #f1f8e9; --sticky-green-bot:  #dcedc8;
+  --sticky-pink-top:   #fce4ec; --sticky-pink-bot:   #f8bbd0;
+  --sticky-purple-top: #f3e5f5; --sticky-purple-bot: #e1bee7;
+  --sticky-gray-top:   #f5f5f5; --sticky-gray-bot:   #e0e0e0;
+  --sticky-ink: #2d2d2d;
+  --sticky-ink-soft: rgba(45, 45, 45, 0.6);
+
+  /* Legacy aliases for old inline styles */
+  --sp-1: var(--s1);
+  --sp-2: var(--s2);
+  --sp-3: var(--s3);
+  --sp-4: var(--s4);
+  --sp-5: var(--s5);
+  --sp-6: var(--s6);
+  --text-title2: var(--t-title);
+  --text-title3: var(--t-heading);
+  --text-subhead: var(--t-sub);
+  --text-footnote: var(--t-tiny);
+  --label: var(--ink);
+  --label-secondary: var(--ink-2);
+  --label-tertiary: var(--ink-3);
+  --shadow-card: var(--shadow-sm);
+}
+
+/* ---------- Dark ---------- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --canvas: #1e1e1e;
+    --ink: #fdfbf7;
+    --ink-2: #e5e0d8;
+    --ink-3: rgba(253, 251, 247, 0.6);
+    --ink-muted: #2d2d2d;
+    
+    --brand: #ff6b6b;
+    --brand-ink: #fdfbf7;
+    --brand-soft: rgba(255, 107, 107, 0.16);
+    
+    --secondary: #4a80d6;
+    --secondary-ink: #fdfbf7;
+
+    --border: #fdfbf7;
+    --border-strong: #fdfbf7;
+    
+    --accent: #ff6b6b;
+    --danger: #ff6b6b;
+    --success: #34d17e;
+
+    --bar: rgba(30, 30, 30, 0.85);
+    --fill: rgba(253, 251, 247, 0.05);
+    --fill-strong: rgba(253, 251, 247, 0.09);
+    --surface: #2d2d2d;
+    --surface-2: #1e1e1e;
+
+    --shadow-sm: 2px 2px 0px 0px var(--ink);
+    --shadow-md: 4px 4px 0px 0px var(--ink);
+    --shadow-lg: 8px 8px 0px 0px var(--ink);
+    --shadow-sticky: 4px 4px 0px 0px var(--ink);
+    --scrim: rgba(0, 0, 0, 0.7);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: #1e1e1e;
+  --ink: #fdfbf7;
+  --ink-2: #e5e0d8;
+  --ink-3: rgba(253, 251, 247, 0.6);
+  --ink-muted: #2d2d2d;
+  
+  --brand: #ff6b6b;
+  --brand-ink: #fdfbf7;
+  --brand-soft: rgba(255, 107, 107, 0.16);
+  
+  --secondary: #4a80d6;
+  --secondary-ink: #fdfbf7;
+
+  --border: #fdfbf7;
+  --border-strong: #fdfbf7;
+  
+  --accent: #ff6b6b;
+  --danger: #ff6b6b;
+  --success: #34d17e;
+
+  --bar: rgba(30, 30, 30, 0.85);
+  --fill: rgba(253, 251, 247, 0.05);
+  --fill-strong: rgba(253, 251, 247, 0.09);
+  --surface: #2d2d2d;
+  --surface-2: #1e1e1e;
+
+  --shadow-sm: 2px 2px 0px 0px var(--ink);
+  --shadow-md: 4px 4px 0px 0px var(--ink);
+  --shadow-lg: 8px 8px 0px 0px var(--ink);
+  --shadow-sticky: 4px 4px 0px 0px var(--ink);
+  --scrim: rgba(0, 0, 0, 0.7);
+}
