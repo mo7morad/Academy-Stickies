@@ -6,3 +6,25 @@ dist/
 scripts/.generated.*.sql
 .DS_Store
 npm-debug.log*
+
+# Private Data
+seed/roster.json
+
+# Tooling Output
+graphify-out/
+coverage/
+.vite/
+
+# Configs & Env
+*.env
+*.env.*
+
+# Local DBs
+*.sqlite
+*.sqlite3
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
