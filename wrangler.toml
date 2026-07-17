@@ -21,7 +21,7 @@ bucket_name = "stickies-media"
 # NOTE: no SITE_URL here on purpose. Locally it comes from .dev.vars; in
 # production it's intentionally unset so the API falls back to the request
 # origin (your https://<project>.pages.dev link). Secrets (SESSION_SECRET,
-# CF_EMAIL_API_TOKEN, CF_ACCOUNT_ID) go in .dev.vars locally and via
+# BREVO_API_KEY, EMAIL_FROM) go in .dev.vars locally and via
 # `wrangler pages secret put` (see the Makefile) in production.
 [vars]
 EMAIL_FROM_NAME = "Academy Stickies"

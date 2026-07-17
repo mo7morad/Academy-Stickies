@@ -1,7 +1,7 @@
 /**
- * Email each member their magic sign-in link via Cloudflare Email Sending.
- * Requires CF_ACCOUNT_ID, CF_EMAIL_API_TOKEN, EMAIL_FROM (loaded from .dev.vars
- * locally, or your shell env).
+ * Email each member their magic sign-in link via Brevo.
+ * Requires BREVO_API_KEY, EMAIL_FROM (loaded from .dev.vars locally, or your
+ * shell env). EMAIL_FROM must be a sender address verified in Brevo.
  *
  *   npm run invite                       # local D1 roster
  *   npm run invite:remote -- --site=https://stickies.yourdomain.com
@@ -11,25 +11,28 @@ import { magicLinkTemplate } from "../lib/email";
 import { d1Query, isRemote, loadDevVars, siteUrl, type MemberRow } from "./util";
 
 async function send(
-  accountId: string,
-  apiToken: string,
-  from: { address: string; name: string },
+  apiKey: string,
+  from: { email: string; name: string },
   to: string,
   name: string,
   link: string,
 ): Promise<void> {
   const { subject, html, text } = magicLinkTemplate(name, link);
-  const res = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${accountId}/email/sending/send`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ to, from, subject, html, text }),
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "api-key": apiKey,
+      "content-type": "application/json",
+      accept: "application/json",
     },
-  );
+    body: JSON.stringify({
+      sender: from,
+      to: [{ email: to, name }],
+      subject,
+      htmlContent: html,
+      textContent: text,
+    }),
+  });
   if (!res.ok) {
     throw new Error(`${res.status} ${await res.text()}`);
   }
@@ -41,14 +44,13 @@ async function main() {
   const dryRun = process.argv.includes("--dry-run");
   const base = siteUrl();
 
-  const accountId = process.env.CF_ACCOUNT_ID;
-  const apiToken = process.env.CF_EMAIL_API_TOKEN;
+  const apiKey = process.env.BREVO_API_KEY;
   const fromAddress = process.env.EMAIL_FROM;
   const fromName = process.env.EMAIL_FROM_NAME || "Academy Stickies";
 
-  if (!dryRun && (!accountId || !apiToken || !fromAddress)) {
+  if (!dryRun && (!apiKey || !fromAddress)) {
     console.error(
-      "Missing email config. Set CF_ACCOUNT_ID, CF_EMAIL_API_TOKEN, EMAIL_FROM\n" +
+      "Missing email config. Set BREVO_API_KEY, EMAIL_FROM\n" +
         "(in .dev.vars or your shell), or run with --dry-run.",
     );
     process.exit(1);
@@ -76,9 +78,8 @@ async function main() {
     }
     try {
       await send(
-        accountId!,
-        apiToken!,
-        { address: fromAddress!, name: fromName },
+        apiKey!,
+        { email: fromAddress!, name: fromName },
         m.email,
         m.name,
         link,

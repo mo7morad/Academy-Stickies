@@ -7,8 +7,9 @@ scripts/.generated.*.sql
 .DS_Store
 npm-debug.log*
 
-# Private Data
+# Private Data (student PII — never commit; repo is public)
 seed/roster.json
+learners-emails.json
 
 # Tooling Output
 graphify-out/

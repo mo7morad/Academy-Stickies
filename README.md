@@ -77,7 +77,7 @@ For a one-off production-style serve without the watcher: `npm run serve`.
 # Local roster, dry run (prints who would be emailed):
 npm run invite -- --dry-run
 
-# Send for real (needs CF_ACCOUNT_ID, CF_EMAIL_API_TOKEN, EMAIL_FROM in .dev.vars):
+# Send for real (needs BREVO_API_KEY, EMAIL_FROM in .dev.vars):
 npm run invite
 
 # Production roster with the live site URL:
@@ -109,16 +109,27 @@ redirects, and `make links` / `make invite` point links there via `--site`.
 
 ### Email (optional)
 
-Needs a domain onboarded for Cloudflare Email Sending (see Prerequisites).
+Email goes out through [Brevo](https://www.brevo.com) — **no domain required.** Brevo's
+free tier sends 300 emails/day from a single *verified sender address*, so a Gmail you
+own works fine. One-time setup:
+
+1. Create a free Brevo account.
+2. **Senders, Domains & Dedicated IPs → Senders → Add a sender** — enter the address you
+   want links to come from (e.g. your Gmail) and click the confirmation email Brevo sends.
+3. **SMTP & API → API Keys → Generate a new API key** (starts with `xkeysib-`).
 
 ```bash
 # Enable the in-app "resend my link" endpoint on the deployed site:
-make secrets-email CF_ACCOUNT_ID=... CF_EMAIL_API_TOKEN=... EMAIL_FROM=stickies@yourdomain.com
+make secrets-email BREVO_API_KEY=xkeysib-... EMAIL_FROM=you@gmail.com
 
 # Blast everyone their link from your machine (reads the same vars from .dev.vars,
 # or pass them on the command line):
 make invite
 ```
+
+Recipients see the mail from your verified address (Gmail may add a small "via brevo.com").
+When you later get a domain, verify it in Brevo — or switch back to native Cloudflare
+Email Sending — for a cleaner From with no "via" tag.
 
 Without email, just share the output of `make links`.
 

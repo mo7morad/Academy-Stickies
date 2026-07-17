@@ -26,13 +26,12 @@ describe("validateImage", () => {
 describe("email config", () => {
   it("is false when incomplete", () => {
     expect(emailConfigured({})).toBe(false);
-    expect(emailConfigured({ CF_ACCOUNT_ID: "a", CF_EMAIL_API_TOKEN: "b" })).toBe(false);
+    expect(emailConfigured({ BREVO_API_KEY: "a" })).toBe(false);
   });
   it("is true when complete", () => {
     expect(
       emailConfigured({
-        CF_ACCOUNT_ID: "a",
-        CF_EMAIL_API_TOKEN: "b",
+        BREVO_API_KEY: "a",
         EMAIL_FROM: "x@y.com",
       }),
     ).toBe(true);

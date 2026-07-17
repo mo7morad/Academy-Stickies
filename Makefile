@@ -53,14 +53,13 @@ secret-session: ## Generate + set SESSION_SECRET on Pages (required)
 	  printf '%s' "$$SECRET" | $(WRANGLER) pages secret put SESSION_SECRET --project-name=$(PROJECT); \
 	  echo "==> SESSION_SECRET set"
 
-secrets-email: ## Set email secrets (needs CF_ACCOUNT_ID, CF_EMAIL_API_TOKEN, EMAIL_FROM)
-	@test -n "$(CF_ACCOUNT_ID)" && test -n "$(CF_EMAIL_API_TOKEN)" && test -n "$(EMAIL_FROM)" || { \
+secrets-email: ## Set email secrets (needs BREVO_API_KEY, EMAIL_FROM)
+	@test -n "$(BREVO_API_KEY)" && test -n "$(EMAIL_FROM)" || { \
 	  echo "Provide the email vars, e.g.:"; \
-	  echo "  make secrets-email CF_ACCOUNT_ID=xxx CF_EMAIL_API_TOKEN=yyy EMAIL_FROM=stickies@yourdomain.com"; \
+	  echo "  make secrets-email BREVO_API_KEY=xkeysib-xxx EMAIL_FROM=you@gmail.com"; \
 	  exit 1; }
-	@printf '%s' "$(CF_ACCOUNT_ID)"      | $(WRANGLER) pages secret put CF_ACCOUNT_ID --project-name=$(PROJECT)
-	@printf '%s' "$(CF_EMAIL_API_TOKEN)" | $(WRANGLER) pages secret put CF_EMAIL_API_TOKEN --project-name=$(PROJECT)
-	@printf '%s' "$(EMAIL_FROM)"         | $(WRANGLER) pages secret put EMAIL_FROM --project-name=$(PROJECT)
+	@printf '%s' "$(BREVO_API_KEY)" | $(WRANGLER) pages secret put BREVO_API_KEY --project-name=$(PROJECT)
+	@printf '%s' "$(EMAIL_FROM)"    | $(WRANGLER) pages secret put EMAIL_FROM --project-name=$(PROJECT)
 	@echo "==> Email secrets set"
 
 seed: ## Load seed/roster.json into the remote D1 database

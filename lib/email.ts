@@ -1,16 +1,50 @@
-// Cloudflare Email Sending via the REST API. On Pages, the REST API is the
-// reliable path (the `send_email` binding is Workers-oriented).
-// Docs: https://developers.cloudflare.com/email-service/
+// Transactional email via Brevo's REST API.
+// Brevo (https://developers.brevo.com/reference/sendtransacemail) is used instead
+// of Cloudflare Email Sending because it delivers from a single *verified sender
+// address* — no domain to own or onboard — so login links can go out for free
+// (300/day) while the rest of the app stays on Cloudflare.
 
 export interface EmailEnv {
-  CF_ACCOUNT_ID?: string;
-  CF_EMAIL_API_TOKEN?: string;
-  EMAIL_FROM?: string;
+  BREVO_API_KEY?: string;
+  EMAIL_FROM?: string; // a sender address verified in Brevo (e.g. a Gmail you own)
   EMAIL_FROM_NAME?: string;
 }
 
 export function emailConfigured(env: EmailEnv): boolean {
-  return Boolean(env.CF_ACCOUNT_ID && env.CF_EMAIL_API_TOKEN && env.EMAIL_FROM);
+  return Boolean(env.BREVO_API_KEY && env.EMAIL_FROM);
+}
+
+interface EmailMessage {
+  subject: string;
+  html: string;
+  text: string;
+}
+
+// Single place that talks to Brevo. Callers decide how to treat a failed send.
+async function sendViaBrevo(
+  env: EmailEnv,
+  to: string,
+  toName: string,
+  msg: EmailMessage,
+): Promise<Response> {
+  return fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "api-key": env.BREVO_API_KEY as string,
+      "content-type": "application/json",
+      accept: "application/json",
+    },
+    body: JSON.stringify({
+      sender: {
+        email: env.EMAIL_FROM,
+        name: env.EMAIL_FROM_NAME || "Academy Stickies",
+      },
+      to: [{ email: to, name: toName }],
+      subject: msg.subject,
+      htmlContent: msg.html,
+      textContent: msg.text,
+    }),
+  });
 }
 
 export async function sendMagicLink(
@@ -20,31 +54,9 @@ export async function sendMagicLink(
   link: string,
 ): Promise<void> {
   if (!emailConfigured(env)) {
-    throw new Error(
-      "Email is not configured (need CF_ACCOUNT_ID, CF_EMAIL_API_TOKEN, EMAIL_FROM).",
-    );
+    throw new Error("Email is not configured (need BREVO_API_KEY, EMAIL_FROM).");
   }
-  const { subject, html, text } = magicLinkTemplate(name, link);
-  const res = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/email/sending/send`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${env.CF_EMAIL_API_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        to,
-        from: {
-          address: env.EMAIL_FROM,
-          name: env.EMAIL_FROM_NAME || "Academy Stickies",
-        },
-        subject,
-        html,
-        text,
-      }),
-    },
-  );
+  const res = await sendViaBrevo(env, to, name, magicLinkTemplate(name, link));
   if (!res.ok) {
     const body = await res.text();
     throw new Error(`Email send failed (${res.status}): ${body}`);
@@ -117,26 +129,11 @@ export async function sendStickyNotification(
     console.warn("Skipping sticky email notification: email not configured");
     return;
   }
-  const { subject, html, text } = stickyNotificationTemplate(recipientName, authorName, link);
-  const res = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/email/sending/send`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${env.CF_EMAIL_API_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        to,
-        from: {
-          address: env.EMAIL_FROM,
-          name: env.EMAIL_FROM_NAME || "Academy Stickies",
-        },
-        subject,
-        html,
-        text,
-      }),
-    },
+  const res = await sendViaBrevo(
+    env,
+    to,
+    recipientName,
+    stickyNotificationTemplate(recipientName, authorName, link),
   );
   if (!res.ok) {
     const body = await res.text();

@@ -7,9 +7,11 @@ SESSION_SECRET="replace-with-a-long-random-string"
 # Public origin used to build magic links + the post-login redirect.
 SITE_URL="http://localhost:8788"
 
-# --- Cloudflare Email Sending (optional locally) -------------------------
+# --- Email via Brevo (optional locally) ----------------------------------
 # Leave blank to skip email; the seed/links scripts still print each magic link.
-CF_ACCOUNT_ID=""
-CF_EMAIL_API_TOKEN=""
-EMAIL_FROM="stickies@yourdomain.com"
+# BREVO_API_KEY: Brevo dashboard → SMTP & API → API Keys (starts with "xkeysib-").
+# EMAIL_FROM:    a sender address you've verified in Brevo (Senders & IPs → Senders).
+#                No domain needed — a Gmail you own works after the verify click.
+BREVO_API_KEY=""
+EMAIL_FROM="you@gmail.com"
 EMAIL_FROM_NAME="Academy Stickies"

@@ -31,8 +31,7 @@ type Env = {
   MEDIA: R2Bucket;
   SESSION_SECRET: string;
   SITE_URL?: string;
-  CF_ACCOUNT_ID?: string;
-  CF_EMAIL_API_TOKEN?: string;
+  BREVO_API_KEY?: string;
   EMAIL_FROM?: string;
   EMAIL_FROM_NAME?: string;
 };
