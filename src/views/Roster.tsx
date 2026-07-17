@@ -4,7 +4,6 @@ import { getMembers } from "../api";
 import { Avatar } from "../components/Avatar";
 import { Segmented, Spinner } from "../components/controls";
 import { Icon } from "../components/Icon";
-import { Pagination } from "../components/Pagination";
 import { navigate } from "../router";
 import { useToast } from "../toast";
 
@@ -61,12 +60,12 @@ export function Roster({
     setPage(1);
   }, [query, session]);
 
+  const totalPages = filtered ? Math.ceil(filtered.length / PAGE_SIZE) : 0;
+
   const visibleMembers = useMemo(() => {
     if (!filtered) return null;
     return filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   }, [filtered, page]);
-
-  const totalPages = filtered ? Math.ceil(filtered.length / PAGE_SIZE) : 0;
 
   return (
     <main class="page">
@@ -137,7 +136,27 @@ export function Roster({
               </button>
             ))}
           </div>
-          <Pagination page={page} totalPages={totalPages} setPage={setPage} />
+          {totalPages > 1 && (
+            <div class="pagination" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "var(--s3)", marginTop: "var(--s5)", marginBottom: "var(--s4)" }}>
+              <button 
+                class="btn btn--tinted" 
+                disabled={page === 1} 
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+              >
+                &larr; Prev
+              </button>
+              <span style={{ fontSize: "var(--t-small)", fontWeight: 600, color: "var(--ink-2)" }}>
+                Page {page} of {totalPages}
+              </span>
+              <button 
+                class="btn btn--tinted" 
+                disabled={page === totalPages} 
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              >
+                Next &rarr;
+              </button>
+            </div>
+          )}
         </>
       )}
 
