@@ -62,10 +62,10 @@ export function Roster({
 
   const visibleMembers = useMemo(() => {
     if (!filtered) return null;
-    return filtered.slice(0, page * PAGE_SIZE);
+    return filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   }, [filtered, page]);
 
-  const hasMore = filtered && visibleMembers && visibleMembers.length < filtered.length;
+  const totalPages = filtered ? Math.ceil(filtered.length / PAGE_SIZE) : 0;
 
   return (
     <main class="page">
@@ -136,10 +136,33 @@ export function Roster({
               </button>
             ))}
           </div>
-          {hasMore && (
-            <div class="page__footer-action" style={{ marginTop: "var(--s4)", marginBottom: "var(--s4)" }}>
-              <button class="btn btn--tinted" onClick={() => setPage((p) => p + 1)}>
-                Load More
+          {totalPages > 1 && (
+            <div class="pagination" style={{ display: "flex", gap: "8px", justifyContent: "center", margin: "var(--s6) 0" }}>
+              <button
+                class="btn btn--tinted"
+                disabled={page === 1}
+                onClick={() => setPage(p => p - 1)}
+                style={{ padding: "8px 12px", minHeight: "0" }}
+              >
+                Prev
+              </button>
+              {Array.from({ length: totalPages }).map((_, i) => (
+                <button
+                  key={i}
+                  class={page === i + 1 ? "btn btn--filled" : "btn btn--tinted"}
+                  onClick={() => setPage(i + 1)}
+                  style={{ padding: "8px 12px", minHeight: "0" }}
+                >
+                  {i + 1}
+                </button>
+              ))}
+              <button
+                class="btn btn--tinted"
+                disabled={page === totalPages}
+                onClick={() => setPage(p => p + 1)}
+                style={{ padding: "8px 12px", minHeight: "0" }}
+              >
+                Next
               </button>
             </div>
           )}

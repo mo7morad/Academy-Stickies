@@ -48,7 +48,7 @@
   background: var(--bar);
   -webkit-backdrop-filter: saturate(180%) blur(18px);
   backdrop-filter: saturate(180%) blur(18px);
-  border-bottom: 3px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 .tabs__inner {
   display: flex;
@@ -61,7 +61,7 @@
   flex: 1;
   text-align: center;
   padding: 8px 12px;
-  border: 3px solid var(--border);
+  border: 1px solid var(--border);
   border-radius: var(--r-wobbly-sm);
   background: var(--surface);
   color: var(--ink);
@@ -124,7 +124,7 @@
   background: var(--bar);
   -webkit-backdrop-filter: saturate(180%) blur(18px);
   backdrop-filter: saturate(180%) blur(18px);
-  border-bottom: 3px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 .navbar__bar {
   height: 48px;
@@ -191,7 +191,7 @@
   font-size: var(--t-body);
   font-weight: 600;
   padding: 8px 16px;
-  border: 3px solid var(--border);
+  border: 1px solid var(--border);
   border-radius: var(--r-wobbly-1);
   background: var(--surface);
   color: var(--ink);
@@ -268,7 +268,7 @@
   align-items: center;
   gap: var(--s2);
   padding: 15px 22px 15px 18px;
-  border: 3px solid var(--border);
+  border: 1px solid var(--border);
   border-radius: var(--r-wobbly-1);
   background: var(--brand);
   color: var(--brand-ink);
@@ -294,7 +294,7 @@
 =========================================================================== */
 .group {
   background: var(--surface);
-  border: 3px solid var(--border);
+  border: 1px solid var(--border);
   border-radius: var(--r-wobbly-1);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
@@ -339,10 +339,10 @@
 }
 .field {
   width: 100%;
-  padding: var(--s4);
+  padding: var(--s3) var(--s4);
   background: var(--surface);
-  border: 3px solid var(--border);
-  border-radius: var(--r-wobbly-sm);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
   color: var(--ink);
   font-family: var(--font-sans);
   font-size: var(--t-body);
@@ -361,6 +361,7 @@
 .field--multiline {
   min-height: 92px;
   line-height: 1.5;
+  border-radius: var(--r-md);
 }
 .field-wrap {
   margin-top: var(--s3);
@@ -438,7 +439,7 @@
    Avatars
 =========================================================================== */
 .avatar {
-  border-radius: var(--r-wobbly-1);
+  border-radius: 50%;
   background: linear-gradient(150deg, var(--surface-2), var(--fill-strong));
   color: var(--ink-2);
   display: inline-flex;
@@ -447,7 +448,7 @@
   font-weight: 700;
   overflow: hidden;
   flex-shrink: 0;
-  border: 3px solid var(--border);
+  border: 1px solid var(--border);
   box-shadow: var(--shadow-sm);
 }
 .avatar img {
@@ -467,9 +468,9 @@
 =========================================================================== */
 .roster {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
-  gap: var(--s3);
-  padding-top: var(--s1);
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--s4);
+  padding-top: var(--s2);
 }
 .member-card {
   position: relative;
@@ -479,7 +480,7 @@
   gap: var(--s2);
   padding: var(--s5) var(--s2);
   background: var(--surface);
-  border: 3px solid var(--border);
+  border: 1px solid var(--border);
   border-radius: var(--r-wobbly-2);
   box-shadow: var(--shadow-sm);
   text-align: center;
@@ -494,17 +495,17 @@
 .member-card--self {
   border-color: var(--brand);
   background: var(--brand-soft);
-  transform: rotate(-1.5deg);
-  box-shadow: 4px 4px 0px 0px var(--brand);
+  transform: none;
+  box-shadow: 0 4px 12px var(--brand-soft);
 }
 @media (hover: hover) and (pointer: fine) {
   .member-card:hover {
-    transform: rotate(-2deg);
+    transform: translateY(-2px);
     box-shadow: var(--shadow-md);
   }
   .member-card--self:hover {
-    transform: rotate(0deg) translate(-2px, -2px);
-    box-shadow: 6px 6px 0px 0px var(--brand);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px var(--brand-soft);
   }
 }
 .member-card__name {
@@ -562,7 +563,7 @@
   padding: var(--s4);
   text-align: left;
   background: var(--surface);
-  border: 3px solid var(--border);
+  border: 1px solid var(--border);
   border-radius: var(--r-wobbly-2);
   box-shadow: var(--shadow-sm);
   transition: transform 180ms var(--ease-out), box-shadow 180ms var(--ease-out);
