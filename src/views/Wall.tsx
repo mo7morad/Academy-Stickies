@@ -1,15 +1,17 @@
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { Me, WallResponse } from "../../shared/types";
 import { deleteSticky, getWall, setWallPublic, uploadAvatar } from "../api";
 import { Avatar } from "../components/Avatar";
-import { Spinner, Switch } from "../components/controls";
+import { HeaderActions } from "../components/HeaderActions";
 import { Icon } from "../components/Icon";
 import { Nav } from "../components/Nav";
+import { ProfileBody } from "../components/ProfileBody";
+import { Sheet } from "../components/Sheet";
 import { StickyNote } from "../components/StickyNote";
+import { Spinner, Switch } from "../components/controls";
 import { squareCrop } from "../lib/image";
 import { navigate } from "../router";
 import { useToast } from "../toast";
-import { HeaderActions } from "../components/HeaderActions";
 
 export function Wall({
   me,
@@ -33,18 +35,21 @@ export function Wall({
   const toast = useToast();
   const [wall, setWall] = useState<WallResponse | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [query, setQuery] = useState("");
+  const [showProfile, setShowProfile] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const isSelf = memberId === me.id;
 
-  const filteredStickies = wall?.stickies.filter((s) => {
-    const q = searchQuery.toLowerCase();
-    return (
-      s.describedAs?.toLowerCase().includes(q) ||
-      s.goodAt?.toLowerCase().includes(q) ||
-      s.authorName?.toLowerCase().includes(q)
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!wall) return [];
+    if (!q) return wall.stickies;
+    return wall.stickies.filter((s) =>
+      [s.describedAs, s.goodAt, s.authorName].some((f) =>
+        f?.toLowerCase().includes(q),
+      ),
     );
-  }) ?? [];
+  }, [wall, query]);
 
   async function load() {
     try {
@@ -56,6 +61,8 @@ export function Wall({
 
   useEffect(() => {
     setWall(null);
+    setQuery("");
+    setShowProfile(false);
     load();
   }, [memberId, refreshSignal]);
 
@@ -63,8 +70,14 @@ export function Wall({
     try {
       const updated = await setWallPublic(next);
       onMeChange(updated);
-      setWall((w) => (w ? { ...w, member: { ...w.member, wallPublic: next } } : w));
-      toast(next ? "Your wall is now visible to the academy." : "Your wall is private again.");
+      setWall((w) =>
+        w ? { ...w, member: { ...w.member, wallPublic: next } } : w,
+      );
+      toast(
+        next
+          ? "Your wall is now visible to the academy."
+          : "Your wall is private again.",
+      );
     } catch {
       toast("Couldn't update your wall.", "error");
     }
@@ -78,6 +91,7 @@ export function Wall({
       const cropped = await squareCrop(file);
       const { avatarUrl } = await uploadAvatar(cropped);
       onMeChange({ ...me, avatarUrl });
+      setWall((w) => (w ? { ...w, member: { ...w.member, avatarUrl } } : w));
       toast("Photo updated.");
     } catch {
       toast("Couldn't upload that photo.", "error");
@@ -101,12 +115,15 @@ export function Wall({
 
   const title = isSelf ? "Your Wall" : (wall?.member.name ?? "Wall");
   const count = wall?.stickies.length ?? 0;
+  const profile = wall?.profile ?? null;
 
   return (
     <>
       <Nav
         title={title}
-        subtitle={wall && wall.visible ? `${count} note${count === 1 ? "" : "s"}` : undefined}
+        subtitle={
+          wall && wall.visible ? `${count} note${count === 1 ? "" : "s"}` : undefined
+        }
         onBack={() => navigate("/")}
         right={
           <HeaderActions
@@ -123,28 +140,81 @@ export function Wall({
           </div>
         ) : (
           <>
-            {isSelf && (
-              <SelfHeader
-                me={me}
-                uploading={uploading}
-                fileRef={fileRef}
-                onPickAvatar={onPickAvatar}
-                wallPublic={wall.member.wallPublic}
-                onTogglePublic={togglePublic}
-              />
-            )}
+            <header class={`wall-head ${isSelf ? "wall-head--self" : ""}`}>
+              <div class="wall-head__avatar">
+                <Avatar
+                  name={wall.member.name}
+                  url={wall.member.avatarUrl}
+                  size={isSelf ? "xxl" : "xl"}
+                  eager
+                />
+                {isSelf && (
+                  <>
+                    <button
+                      class="icon-btn wall-head__camera"
+                      aria-label="Change photo"
+                      onClick={() => fileRef.current?.click()}
+                    >
+                      {uploading ? <Spinner /> : <Icon name="camera" size={18} />}
+                    </button>
+                    <input
+                      ref={fileRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      hidden
+                      onChange={onPickAvatar}
+                    />
+                  </>
+                )}
+              </div>
 
-            {!isSelf && (
-              <div style="display:flex;align-items:center;gap:var(--sp-3);margin:var(--sp-2) 0 var(--sp-4);">
-                <Avatar name={wall.member.name} url={wall.member.avatarUrl} size="lg" />
-                <div style="flex:1;">
-                  <div style="font-size:var(--text-title3);font-weight:700;">
-                    {wall.member.name}
+              <div class="wall-head__text">
+                <h1 class="wall-head__name">{wall.member.name}</h1>
+                <div class="wall-head__meta">
+                  {profile?.session && (
+                    <span class="chip chip--session">{profile.session} session</span>
+                  )}
+                  {isSelf && <span class="chip">{me.email}</span>}
+                </div>
+                {profile?.tagline && (
+                  <p class="wall-head__tagline">{profile.tagline}</p>
+                )}
+
+                <div class="wall-head__actions">
+                  {profile && (
+                    <button
+                      class="btn btn--tinted"
+                      onClick={() => setShowProfile(true)}
+                    >
+                      <Icon name="person" size={16} />
+                      {isSelf ? "Your profile" : "Read profile"}
+                    </button>
+                  )}
+                  {!isSelf && (
+                    <button
+                      class="btn btn--filled"
+                      onClick={() => onGive(wall.member.id)}
+                    >
+                      <Icon name="plus" size={16} />
+                      Give a sticky
+                    </button>
+                  )}
+                </div>
+              </div>
+            </header>
+
+            {isSelf && (
+              <div class="group">
+                <div class="row">
+                  <div class="row__label">
+                    Visible to the academy
+                    <small>Let everyone see the notes on your wall.</small>
                   </div>
-                  <button class="btn btn--tinted" style="margin-top:var(--sp-2);" onClick={() => onGive(wall.member.id)}>
-                    <Icon name="plus" size={16} />
-                    Give a sticky
-                  </button>
+                  <Switch
+                    checked={wall.member.wallPublic}
+                    onChange={togglePublic}
+                    label="Make my wall visible to the academy"
+                  />
                 </div>
               </div>
             )}
@@ -153,8 +223,14 @@ export function Wall({
               <div class="empty">
                 <div class="empty__emoji">🔒</div>
                 <div class="empty__title">This wall is private</div>
-                <p>{wall.member.name} hasn't shared their wall with the academy yet.</p>
-                <button class="btn btn--filled" style="margin-top:var(--sp-4);" onClick={() => onGive(wall.member.id)}>
+                <p>
+                  {wall.member.name} hasn't shared their wall yet — but you can
+                  still read their profile and leave them a note.
+                </p>
+                <button
+                  class="btn btn--filled empty__action"
+                  onClick={() => onGive(wall.member.id)}
+                >
                   Leave them a sticky anyway
                 </button>
               </div>
@@ -167,29 +243,32 @@ export function Wall({
                 <p>
                   {isSelf
                     ? "When academy members describe you, their notes land here."
-                    : `Be the first to leave ${wall.member.name} a note.`}
+                    : `Be the first to leave ${wall.member.name.split(" ")[0]} a note.`}
                 </p>
               </div>
             ) : (
               <>
-                <div style="margin-bottom: var(--s4);">
+                {count > 3 && (
                   <input
                     type="search"
                     class="field"
-                    placeholder="Search stickies..."
-                    value={searchQuery}
-                    onInput={(e) => setSearchQuery((e.currentTarget as HTMLInputElement).value)}
+                    placeholder="Search these stickies…"
+                    value={query}
+                    aria-label="Search stickies"
+                    onInput={(e) =>
+                      setQuery((e.currentTarget as HTMLInputElement).value)
+                    }
                   />
-                </div>
-                {filteredStickies.length === 0 ? (
+                )}
+                {filtered.length === 0 ? (
                   <div class="empty">
                     <div class="empty__emoji">🔍</div>
                     <div class="empty__title">No stickies found</div>
-                    <p>We couldn't find any stickies matching "{searchQuery}".</p>
+                    <p>Nothing matched “{query}”.</p>
                   </div>
                 ) : (
                   <div class="wall">
-                    {filteredStickies.map((s) => (
+                    {filtered.map((s) => (
                       <StickyNote
                         key={s.id}
                         sticky={s}
@@ -204,67 +283,28 @@ export function Wall({
           </>
         )}
       </main>
-    </>
-  );
-}
 
-function SelfHeader({
-  me,
-  uploading,
-  fileRef,
-  onPickAvatar,
-  wallPublic,
-  onTogglePublic,
-}: {
-  me: Me;
-  uploading: boolean;
-  fileRef: { current: HTMLInputElement | null };
-  onPickAvatar: (e: Event) => void;
-  wallPublic: boolean;
-  onTogglePublic: (v: boolean) => void;
-}) {
-  return (
-    <>
-      <div style="display:flex;flex-direction:column;align-items:center;text-align:center;margin:var(--sp-2) 0 var(--sp-5);">
-        <div style="position:relative;">
-          <Avatar name={me.name} url={me.avatarUrl} size="xl" />
-          <button
-            class="icon-btn"
-            style="position:absolute;right:-4px;bottom:-4px;background:var(--tint);color:var(--tint-contrast);box-shadow:var(--shadow-card);"
-            aria-label="Change photo"
-            onClick={() => fileRef.current?.click()}
-          >
-            {uploading ? <Spinner /> : <Icon name="camera" size={18} />}
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            hidden
-            onChange={onPickAvatar}
-          />
-        </div>
-        <div style="font-size:var(--text-title2);font-weight:700;margin-top:var(--sp-3);">
-          {me.name}
-        </div>
-        <div style="color:var(--label-secondary);font-size:var(--text-subhead);">
-          {me.email}
-        </div>
-      </div>
-
-      <div class="group">
-        <div class="row">
-          <div class="row__label">
-            Visible to the academy
-            <small>Let everyone see the notes on your wall.</small>
+      {showProfile && profile && wall && (
+        <Sheet
+          title={isSelf ? "Your profile" : wall.member.name}
+          onClose={() => setShowProfile(false)}
+        >
+          <div class="profile-head">
+            <Avatar name={wall.member.name} url={wall.member.avatarUrl} size="xl" eager />
+            <div>
+              <div class="profile-head__name">{wall.member.name}</div>
+              {profile.session && (
+                <div class="profile-head__role">{profile.session} session</div>
+              )}
+            </div>
           </div>
-          <Switch
-            checked={wallPublic}
-            onChange={onTogglePublic}
-            label="Make my wall visible to the academy"
+          <ProfileBody
+            intro={profile.intro}
+            sections={profile.sections}
+            links={profile.links}
           />
-        </div>
-      </div>
+        </Sheet>
+      )}
     </>
   );
 }

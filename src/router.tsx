@@ -1,7 +1,7 @@
 import { useEffect, useState } from "preact/hooks";
 
 export interface Route {
-  name: "roster" | "wall" | "me";
+  name: "roster" | "wall" | "me" | "mentors";
   id?: string;
 }
 
@@ -9,6 +9,7 @@ function parse(hash: string): Route {
   const clean = hash.replace(/^#/, "");
   if (clean === "" || clean === "/") return { name: "roster" };
   if (clean === "/me") return { name: "me" };
+  if (clean === "/mentors") return { name: "mentors" };
   const m = clean.match(/^\/m\/([^/?]+)/);
   if (m) return { name: "wall", id: decodeURIComponent(m[1]) };
   return { name: "roster" };

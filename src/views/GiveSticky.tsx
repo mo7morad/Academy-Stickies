@@ -3,8 +3,8 @@ import type { Me, RosterMember } from "../../shared/types";
 import { MAX_FIELD_LEN, STICKY_COLORS } from "../../shared/types";
 import { createSticky, getMembers } from "../api";
 import { Avatar } from "../components/Avatar";
-import { Segmented, Spinner } from "../components/controls";
 import { Icon } from "../components/Icon";
+import { Segmented, Spinner } from "../components/controls";
 import { fitPhoto } from "../lib/image";
 import { useToast } from "../toast";
 
@@ -19,7 +19,7 @@ export function GiveSticky({
 }) {
   const toast = useToast();
   const [members, setMembers] = useState<RosterMember[] | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [query, setQuery] = useState("");
   const [recipientId, setRecipientId] = useState(prefillRecipientId ?? "");
   const [describedAs, setDescribedAs] = useState("");
   const [goodAt, setGoodAt] = useState("");
@@ -39,9 +39,32 @@ export function GiveSticky({
     () => (photo ? URL.createObjectURL(photo) : null),
     [photo],
   );
-  useEffect(() => () => {
-    if (photoUrl) URL.revokeObjectURL(photoUrl);
-  }, [photoUrl]);
+  useEffect(
+    () => () => {
+      if (photoUrl) URL.revokeObjectURL(photoUrl);
+    },
+    [photoUrl],
+  );
+
+  const recipient = members?.find((m) => m.id === recipientId) ?? null;
+
+  // The chosen person stays pinned to the front so they never scroll out of
+  // view behind a search that no longer matches them.
+  const shown = useMemo(() => {
+    if (!members) return null;
+    const q = query.trim().toLowerCase();
+    const matches = q
+      ? members.filter(
+          (m) =>
+            m.name.toLowerCase().includes(q) ||
+            (m.tagline?.toLowerCase().includes(q) ?? false),
+        )
+      : members;
+    if (recipient && !matches.some((m) => m.id === recipient.id)) {
+      return [recipient, ...matches];
+    }
+    return matches;
+  }, [members, query, recipient]);
 
   const canSubmit =
     !!recipientId && (describedAs.trim().length > 0 || goodAt.trim().length > 0);
@@ -62,60 +85,51 @@ export function GiveSticky({
       toast("Sticky delivered 🎉");
       onCreated(recipientId);
     } catch (err) {
-      toast(err instanceof Error ? err.message : "Couldn't send that sticky.", "error");
+      toast(
+        err instanceof Error ? err.message : "Couldn't send that sticky.",
+        "error",
+      );
     } finally {
       setBusy(false);
     }
   }
 
-  const filteredMembers = members?.filter((m) =>
-    m.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   return (
-    <div>
-      {/* Recipient */}
-      <div class="group__header">To</div>
+    <div class="give">
+      <div class="group__header">
+        To {recipient && <span class="give__to">· {recipient.name}</span>}
+      </div>
+
       {!members ? (
-        <div style="padding:var(--sp-4);">
+        <div class="give__loading">
           <Spinner />
         </div>
       ) : (
         <>
-          <div style="padding: 0 var(--sp-1) var(--sp-2);">
-            <input
-              type="search"
-              class="field"
-              placeholder="Search members..."
-              value={searchQuery}
-              onInput={(e) => setSearchQuery((e.currentTarget as HTMLInputElement).value)}
-            />
-          </div>
-          {filteredMembers?.length === 0 ? (
-            <div style="padding: var(--sp-4); text-align: center; color: var(--ink-2); font-size: var(--t-small);">
-              No members found matching "{searchQuery}"
-            </div>
+          <input
+            type="search"
+            class="field"
+            placeholder="Search for someone…"
+            value={query}
+            aria-label="Search for a recipient"
+            onInput={(e) => setQuery((e.currentTarget as HTMLInputElement).value)}
+          />
+          {shown?.length === 0 ? (
+            <p class="give__none">Nobody matched “{query}”.</p>
           ) : (
-            <div
-              style="display:flex;gap:var(--sp-3);overflow-x:auto;padding:var(--sp-1) 2px var(--sp-4);"
-            >
-              {filteredMembers?.map((m) => {
+            <div class="picker" role="listbox" aria-label="Recipient">
+              {shown?.map((m) => {
                 const selected = m.id === recipientId;
                 return (
                   <button
                     key={m.id}
+                    role="option"
+                    aria-selected={selected}
+                    class={`picker__item ${selected ? "picker__item--on" : ""}`}
                     onClick={() => setRecipientId(m.id)}
-                    aria-pressed={selected}
-                    style={`flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:6px;width:64px;opacity:${selected ? 1 : 0.6};transition:opacity .15s;`}
                   >
-                    <div
-                      style={`border-radius:50%;padding:2px;box-shadow:${selected ? "0 0 0 2px var(--tint)" : "0 0 0 2px transparent"};transition:box-shadow .15s;`}
-                    >
-                      <Avatar name={m.name} url={m.avatarUrl} size="md" />
-                    </div>
-                    <span style="font-size:var(--text-caption);text-align:center;line-height:1.1;max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                      {m.name.split(" ")[0]}
-                    </span>
+                    <Avatar name={m.name} url={m.avatarUrl} size="md" />
+                    <span class="picker__name">{m.name.split(" ")[0]}</span>
                   </button>
                 );
               })}
@@ -124,9 +138,8 @@ export function GiveSticky({
         </>
       )}
 
-      {/* The note */}
       <div class="group__header">The note</div>
-      <div class="group" style="margin-bottom:var(--sp-4);">
+      <div class="group">
         <FieldArea
           label="I'd describe you as…"
           value={describedAs}
@@ -139,9 +152,8 @@ export function GiveSticky({
         />
       </div>
 
-      {/* Paper color */}
       <div class="group__header">Paper color</div>
-      <div class="group" style="margin-bottom:var(--sp-4);">
+      <div class="group">
         <div class="swatches">
           {STICKY_COLORS.map((c) => (
             <button
@@ -156,48 +168,37 @@ export function GiveSticky({
         </div>
       </div>
 
-      {/* Signature */}
       <div class="group__header">Signature</div>
-      <div style="padding:2px var(--sp-1) var(--sp-1);">
-        <Segmented
-          value={anon ? "anon" : "signed"}
-          onChange={(v) => setAnon(v === "anon")}
-          options={[
-            { value: "signed", label: `Sign it · ${me.name.split(" ")[0]}` },
-            { value: "anon", label: "Anonymous" },
-          ]}
-        />
-      </div>
-      <p style="color:var(--label-tertiary);font-size:var(--text-footnote);padding:var(--sp-2) var(--sp-1) var(--sp-4);">
+      <Segmented
+        value={anon ? "anon" : "signed"}
+        onChange={(v) => setAnon(v === "anon")}
+        options={[
+          { value: "signed", label: `Sign it · ${me.name.split(" ")[0]}` },
+          { value: "anon", label: "Anonymous" },
+        ]}
+      />
+      <p class="give__hint">
         {anon
           ? "Your name is never stored on anonymous stickies."
           : "They'll see your name on this sticky."}
       </p>
 
-      {/* Photo */}
-      <div class="group" style="margin-bottom:var(--sp-5);">
+      <div class="group">
         {photoUrl ? (
           <div class="row">
-            <img
-              src={photoUrl}
-              alt=""
-              style="width:52px;height:52px;border-radius:var(--r-sm);object-fit:cover;"
-            />
+            <img src={photoUrl} alt="" class="give__thumb" />
             <div class="row__label">Photo attached</div>
-            <button class="btn btn--plain btn--danger" onClick={() => setPhoto(null)}>
+            <button
+              class="btn btn--plain btn--danger"
+              onClick={() => setPhoto(null)}
+            >
               Remove
             </button>
           </div>
         ) : (
-          <button
-            class="row"
-            style="width:100%;color:var(--tint);"
-            onClick={() => fileRef.current?.click()}
-          >
+          <button class="row give__add-photo" onClick={() => fileRef.current?.click()}>
             <Icon name="camera" size={20} />
-            <div class="row__label" style="text-align:left;">
-              Add a photo (optional)
-            </div>
+            <div class="row__label">Add a photo (optional)</div>
           </button>
         )}
         <input
@@ -217,7 +218,13 @@ export function GiveSticky({
         disabled={!canSubmit || busy}
         onClick={submit}
       >
-        {busy ? <Spinner /> : <><Icon name="paperplane" size={18} /> Send sticky</>}
+        {busy ? (
+          <Spinner />
+        ) : (
+          <>
+            <Icon name="paperplane" size={18} /> Send sticky
+          </>
+        )}
       </button>
     </div>
   );

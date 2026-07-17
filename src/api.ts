@@ -1,6 +1,7 @@
 import type {
   CreateStickyResult,
   Me,
+  Mentor,
   RosterMember,
   WallResponse,
 } from "../shared/types";
@@ -58,6 +59,11 @@ export async function getMembers(): Promise<RosterMember[]> {
 
 export async function getWall(id: string): Promise<WallResponse> {
   return parse<WallResponse>(await fetch(`/api/members/${id}`));
+}
+
+export async function getMentors(): Promise<Mentor[]> {
+  const data = await parse<{ mentors: Mentor[] }>(await fetch("/api/mentors"));
+  return data.mentors;
 }
 
 export async function setWallPublic(wallPublic: boolean): Promise<Me> {

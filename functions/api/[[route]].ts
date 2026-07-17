@@ -20,6 +20,10 @@ import { pseudonymFor } from "../../lib/pseudonym";
 import { MAX_FIELD_LEN, STICKY_COLORS } from "../../shared/types";
 import type {
   Me,
+  Mentor,
+  Profile,
+  ProfileLink,
+  ProfileSection,
   RosterMember,
   Sticky,
   StickyColor,
@@ -45,6 +49,7 @@ interface MemberRow {
   wall_public: number;
   created_at: number;
   last_login_at: number | null;
+  photo_key: string | null; // joined from profiles — the cohort photo
 }
 
 type Variables = { member: MemberRow };
@@ -69,8 +74,26 @@ function siteOrigin(c: AppContext): string {
   return new URL(c.req.url).origin;
 }
 
-function avatarUrl(m: { avatar_key: string | null }): string | null {
-  return m.avatar_key ? `/api/media/${m.avatar_key}` : null;
+function mediaUrl(key: string | null): string | null {
+  return key ? `/api/media/${key}` : null;
+}
+
+/** A member's own upload wins; otherwise fall back to their cohort photo. */
+function avatarUrl(m: {
+  avatar_key: string | null;
+  photo_key?: string | null;
+}): string | null {
+  return mediaUrl(m.avatar_key ?? m.photo_key ?? null);
+}
+
+/** Profile prose is stored as JSON text in D1; never let a bad row 500 a page. */
+function parseJson<T>(raw: string | null, fallback: T): T {
+  if (!raw) return fallback;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
 }
 
 function toMe(m: MemberRow): Me {
@@ -91,7 +114,11 @@ async function requireAuth(c: AppContext, next: Next) {
     : null;
   if (!memberId) return c.json({ error: "unauthorized" }, 401);
 
-  const member = await c.env.DB.prepare("SELECT * FROM members WHERE id = ?")
+  const member = await c.env.DB.prepare(
+    `SELECT m.*, p.photo_key
+     FROM members m LEFT JOIN profiles p ON p.member_id = m.id
+     WHERE m.id = ?`,
+  )
     .bind(memberId)
     .first<MemberRow>();
   if (!member) return c.json({ error: "unauthorized" }, 401);
@@ -225,30 +252,82 @@ app.post("/me/avatar", requireAuth, async (c) => {
 // Roster + walls
 // ---------------------------------------------------------------------------
 
-app.get("/members", requireAuth, async (c) => {
-  const me = c.get("member");
-  const rows = await c.env.DB.prepare(
-    `SELECT m.id, m.name, m.avatar_key, m.wall_public,
-            (SELECT COUNT(*) FROM stickies s WHERE s.recipient_id = m.id) AS received_count
-     FROM members m
-     ORDER BY m.name COLLATE NOCASE ASC`,
-  ).all<{
-    id: string;
-    name: string;
-    avatar_key: string | null;
-    wall_public: number;
-    received_count: number;
-  }>();
+interface RosterRow {
+  id: string;
+  name: string;
+  avatar_key: string | null;
+  wall_public: number;
+  received_count: number;
+  photo_key: string | null;
+  session: string | null;
+  tagline: string | null;
+}
 
-  const members: RosterMember[] = (rows.results ?? []).map((r) => ({
+function toRosterMember(r: RosterRow, meId: string): RosterMember {
+  return {
     id: r.id,
     name: r.name,
     avatarUrl: avatarUrl(r),
     wallPublic: r.wall_public === 1,
-    isSelf: r.id === me.id,
+    isSelf: r.id === meId,
     receivedCount: r.received_count,
-  }));
+    session: r.session,
+    tagline: r.tagline,
+  };
+}
+
+// The roster deliberately carries only the card-sized bits of a profile
+// (photo, session, tagline). The prose is fetched per member.
+app.get("/members", requireAuth, async (c) => {
+  const me = c.get("member");
+  const rows = await c.env.DB.prepare(
+    `SELECT m.id, m.name, m.avatar_key, m.wall_public,
+            p.photo_key, p.session, p.tagline,
+            (SELECT COUNT(*) FROM stickies s WHERE s.recipient_id = m.id) AS received_count
+     FROM members m
+     LEFT JOIN profiles p ON p.member_id = m.id
+     ORDER BY m.name COLLATE NOCASE ASC`,
+  ).all<RosterRow>();
+
+  const members = (rows.results ?? []).map((r) => toRosterMember(r, me.id));
   return c.json({ members });
+});
+
+// Mentors are read-only: browsable by any signed-in member, but they have no
+// wall and cannot be given stickies, so this is a plain list.
+app.get("/mentors", requireAuth, async (c) => {
+  const rows = await c.env.DB.prepare(
+    `SELECT id, slug, name, nickname, role, skills, tagline, photo_key, intro, sections, links
+     FROM mentors
+     ORDER BY sort_order ASC, name COLLATE NOCASE ASC`,
+  ).all<{
+    id: string;
+    slug: string;
+    name: string;
+    nickname: string | null;
+    role: string | null;
+    skills: string;
+    tagline: string | null;
+    photo_key: string | null;
+    intro: string | null;
+    sections: string;
+    links: string;
+  }>();
+
+  const mentors: Mentor[] = (rows.results ?? []).map((r) => ({
+    id: r.id,
+    slug: r.slug,
+    name: r.name,
+    nickname: r.nickname,
+    role: r.role,
+    skills: parseJson<string[]>(r.skills, []),
+    tagline: r.tagline,
+    photoUrl: mediaUrl(r.photo_key),
+    intro: r.intro ?? "",
+    sections: parseJson<ProfileSection[]>(r.sections, []),
+    links: parseJson<ProfileLink[]>(r.links, []),
+  }));
+  return c.json({ mentors });
 });
 
 app.get("/members/:id", requireAuth, async (c) => {
@@ -257,30 +336,37 @@ app.get("/members/:id", requireAuth, async (c) => {
 
   const member = await c.env.DB.prepare(
     `SELECT m.id, m.name, m.avatar_key, m.wall_public,
+            p.photo_key, p.session, p.tagline, p.intro, p.sections, p.links,
             (SELECT COUNT(*) FROM stickies s WHERE s.recipient_id = m.id) AS received_count
-     FROM members m WHERE m.id = ?`,
+     FROM members m
+     LEFT JOIN profiles p ON p.member_id = m.id
+     WHERE m.id = ?`,
   )
     .bind(id)
-    .first<{
-      id: string;
-      name: string;
-      avatar_key: string | null;
-      wall_public: number;
-      received_count: number;
-    }>();
+    .first<
+      RosterRow & {
+        intro: string | null;
+        sections: string | null;
+        links: string | null;
+      }
+    >();
   if (!member) return c.json({ error: "not found" }, 404);
 
   const isSelf = member.id === me.id;
   const visible = isSelf || member.wall_public === 1;
+  const rosterMember = toRosterMember(member, me.id);
 
-  const rosterMember: RosterMember = {
-    id: member.id,
-    name: member.name,
-    avatarUrl: avatarUrl(member),
-    wallPublic: member.wall_public === 1,
-    isSelf,
-    receivedCount: member.received_count,
-  };
+  // A profile introduces someone to the cohort, so it stays readable even when
+  // they keep their sticky wall private. Members without a profile get null.
+  const profile: Profile | null = member.sections
+    ? {
+        session: member.session,
+        tagline: member.tagline,
+        intro: member.intro ?? "",
+        sections: parseJson<ProfileSection[]>(member.sections, []),
+        links: parseJson<ProfileLink[]>(member.links, []),
+      }
+    : null;
 
   if (!visible) {
     const res: WallResponse = {
@@ -288,6 +374,7 @@ app.get("/members/:id", requireAuth, async (c) => {
       isSelf,
       visible: false,
       stickies: [],
+      profile,
     };
     return c.json(res);
   }
@@ -332,7 +419,13 @@ app.get("/members/:id", requireAuth, async (c) => {
     createdAt: r.created_at,
   }));
 
-  const res: WallResponse = { member: rosterMember, isSelf, visible: true, stickies };
+  const res: WallResponse = {
+    member: rosterMember,
+    isSelf,
+    visible: true,
+    stickies,
+    profile,
+  };
   return c.json(res);
 });
 
@@ -461,9 +554,13 @@ app.delete("/stickies/:id", requireAuth, async (c) => {
 });
 
 // ---------------------------------------------------------------------------
-// Media (auth-gated). Avatars are open to any member; sticky photos follow
-// the same visibility rule as their wall.
+// Media (auth-gated). Avatars and cohort photos (learners/, mentors/) are open
+// to any signed-in member; sticky photos follow the same visibility rule as
+// their wall. Nothing here is reachable without a session — these are real
+// people's faces, so there is no public path to them.
 // ---------------------------------------------------------------------------
+
+const OPEN_MEDIA_PREFIXES = ["avatars/", "learners/", "mentors/"];
 
 app.get("/media/*", requireAuth, async (c) => {
   const me = c.get("member");
@@ -485,7 +582,7 @@ app.get("/media/*", requireAuth, async (c) => {
       row.author_id === me.id ||
       row.wall_public === 1;
     if (!allowed) return c.json({ error: "forbidden" }, 403);
-  } else if (!key.startsWith("avatars/")) {
+  } else if (!OPEN_MEDIA_PREFIXES.some((p) => key.startsWith(p))) {
     return c.json({ error: "not found" }, 404);
   }
 
@@ -495,9 +592,15 @@ app.get("/media/*", requireAuth, async (c) => {
   const headers = new Headers();
   object.writeHttpMetadata(headers);
   headers.set("etag", object.httpEtag);
+  // Cohort photos never change under a given key, so let the browser keep them.
+  const immutable = key.startsWith("learners/") || key.startsWith("mentors/");
   headers.set(
     "Cache-Control",
-    key.startsWith("avatars/") ? "private, max-age=3600" : "private, max-age=600",
+    immutable
+      ? "private, max-age=604800, immutable"
+      : key.startsWith("avatars/")
+        ? "private, max-age=3600"
+        : "private, max-age=600",
   );
   return new Response(object.body, { headers });
 });

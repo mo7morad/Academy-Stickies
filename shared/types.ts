@@ -19,6 +19,42 @@ export interface Me {
   wallPublic: boolean;
 }
 
+/** One "## About Me"-style block from a cohort profile. Body is Markdown. */
+export interface ProfileSection {
+  title: string;
+  body: string;
+}
+
+export interface ProfileLink {
+  label: string;
+  url: string;
+}
+
+/** A learner's academy profile. Visible to any signed-in member: it introduces
+ *  them to the cohort, and is deliberately independent of wall visibility. */
+export interface Profile {
+  session: string | null; // "AM" | "PM"
+  tagline: string | null;
+  intro: string;
+  sections: ProfileSection[];
+  links: ProfileLink[];
+}
+
+/** A senior/mentor. Not a roster member: no wall, no stickies, no sign-in. */
+export interface Mentor {
+  id: string;
+  slug: string;
+  name: string;
+  nickname: string | null;
+  role: string | null;
+  skills: string[];
+  tagline: string | null;
+  photoUrl: string | null;
+  intro: string;
+  sections: ProfileSection[];
+  links: ProfileLink[];
+}
+
 export interface RosterMember {
   id: string;
   name: string;
@@ -26,6 +62,8 @@ export interface RosterMember {
   wallPublic: boolean;
   isSelf: boolean;
   receivedCount: number;
+  session: string | null;
+  tagline: string | null;
 }
 
 export interface Sticky {
@@ -46,6 +84,7 @@ export interface WallResponse {
   isSelf: boolean;
   visible: boolean; // false => private wall the viewer may not see
   stickies: Sticky[];
+  profile: Profile | null; // shown even when the wall itself is private
 }
 
 export interface CreateStickyResult {

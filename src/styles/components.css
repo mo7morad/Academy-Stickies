@@ -22,6 +22,84 @@
   font-size: var(--t-heading);
   font-weight: 700;
 }
+.page__lede {
+  color: var(--ink-2);
+  margin: 0 var(--s1) var(--s4);
+}
+.page__lede strong {
+  color: var(--ink);
+}
+.page__footer-action {
+  margin-top: var(--s6);
+  text-align: center;
+}
+
+/* ===========================================================================
+   Directory tabs
+=========================================================================== */
+/* Full-bleed bar so the blur reaches the viewport edges; the links stay
+   aligned to the page column via __inner. Sits directly under the navbar
+   (safe-area + its 48px row). */
+.tabs {
+  position: sticky;
+  /* safe area + the navbar's 48px row + its 3px rule */
+  top: calc(var(--safe-top) + 51px);
+  z-index: 35;
+  background: var(--bar);
+  -webkit-backdrop-filter: saturate(180%) blur(18px);
+  backdrop-filter: saturate(180%) blur(18px);
+  border-bottom: 3px solid var(--border);
+}
+.tabs__inner {
+  display: flex;
+  gap: var(--s2);
+  padding: var(--s3) var(--s4);
+  max-width: 860px;
+  margin: 0 auto;
+}
+.tabs__tab {
+  flex: 1;
+  text-align: center;
+  padding: 8px 12px;
+  border: 3px solid var(--border);
+  border-radius: var(--r-wobbly-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: var(--t-sub);
+  box-shadow: var(--shadow-sm);
+  transition: transform 160ms var(--ease-out), background 160ms var(--ease-out),
+    color 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
+}
+.tabs__tab[aria-current="page"] {
+  background: var(--brand);
+  color: var(--brand-ink);
+}
+.tabs__tab:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .tabs__tab:hover:not([aria-current="page"]) {
+    background: var(--ink-muted);
+  }
+}
+
+/* ===========================================================================
+   Filters
+=========================================================================== */
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  margin-bottom: var(--s4);
+}
+.roster-count {
+  font-size: var(--t-small);
+  color: var(--ink-3);
+  font-weight: 600;
+  padding: 0 var(--s1) var(--s2);
+}
 
 /* ===========================================================================
    Top bar
@@ -365,9 +443,12 @@
   height: 100%;
   object-fit: cover;
 }
-.avatar--xl { width: 104px; height: 104px; font-size: 36px; }
-.avatar--lg { width: 66px;  height: 66px;  font-size: 24px; }
-.avatar--md { width: 46px;  height: 46px;  font-size: 17px; }
+/* Sizes mirror PX in Avatar.tsx so the <img> can carry width/height. */
+.avatar--xxl { width: 132px; height: 132px; font-size: 44px; }
+.avatar--xl  { width: 104px; height: 104px; font-size: 36px; }
+.avatar--lg  { width: 66px;  height: 66px;  font-size: 24px; }
+.avatar--md  { width: 46px;  height: 46px;  font-size: 17px; }
+.avatar--sm  { width: 34px;  height: 34px;  font-size: 13px; }
 
 /* ===========================================================================
    Roster
@@ -379,6 +460,7 @@
   padding-top: var(--s1);
 }
 .member-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -435,6 +517,186 @@
   background: var(--brand-soft);
   padding: 3px 8px;
   border-radius: var(--r-pill);
+}
+/* AM/PM session, pinned to the card corner like a pencilled-in note. */
+.member-card__session {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+}
+
+/* ===========================================================================
+   Mentors
+=========================================================================== */
+.mentors {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--s4);
+  padding-top: var(--s1);
+}
+@media (min-width: 640px) {
+  .mentors {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.mentor-card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s4);
+  padding: var(--s4);
+  text-align: left;
+  background: var(--surface);
+  border: 3px solid var(--border);
+  border-radius: var(--r-wobbly-2);
+  box-shadow: var(--shadow-sm);
+  transition: transform 180ms var(--ease-out), box-shadow 180ms var(--ease-out);
+  animation: pop-in 320ms var(--ease-out) both;
+}
+.mentor-card:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .mentor-card:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: var(--shadow-md);
+  }
+}
+.mentor-card__text {
+  min-width: 0;
+  flex: 1;
+}
+.mentor-card__name {
+  font-size: var(--t-sub);
+  font-weight: 800;
+  line-height: 1.2;
+}
+.mentor-card__role {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: var(--t-tiny);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--secondary);
+}
+.mentor-card__tagline {
+  margin-top: var(--s2);
+  font-size: var(--t-small);
+  color: var(--ink-2);
+  line-height: 1.4;
+  /* Taglines are one sentence of their own prose — keep cards even. */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ===========================================================================
+   Profiles (learners + mentors share this)
+=========================================================================== */
+.profile-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+  padding-bottom: var(--s4);
+  margin-bottom: var(--s4);
+  border-bottom: 3px dashed var(--ink-muted);
+}
+.profile-head__name {
+  font-family: var(--font-heading);
+  font-size: var(--t-heading);
+  font-weight: 700;
+  line-height: 1.2;
+}
+.profile-head__role {
+  margin-top: 4px;
+  font-size: var(--t-tiny);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--secondary);
+}
+.profile-head__meta {
+  margin-top: 4px;
+  font-size: var(--t-small);
+  color: var(--ink-3);
+}
+.profile__skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin-bottom: var(--s5);
+}
+.profile__intro {
+  color: var(--ink);
+}
+.profile__section {
+  margin-top: var(--s5);
+  padding-top: var(--s4);
+  border-top: 2px dashed var(--ink-muted);
+}
+.profile__heading {
+  font-family: var(--font-heading);
+  font-size: var(--t-sub);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--brand);
+  margin-bottom: var(--s2);
+}
+.profile__empty {
+  color: var(--ink-3);
+  text-align: center;
+  padding: var(--s6) 0;
+}
+.profile__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin-top: var(--s5);
+  padding-top: var(--s4);
+  border-top: 2px dashed var(--ink-muted);
+}
+
+/* Rendered Markdown from member-written profiles. */
+.prose p,
+.prose ul,
+.prose ol {
+  margin-bottom: var(--s3);
+}
+.prose > *:last-child {
+  margin-bottom: 0;
+}
+.prose ul,
+.prose ol {
+  padding-left: var(--s5);
+}
+.prose li {
+  margin-bottom: var(--s1);
+}
+.prose li::marker {
+  color: var(--brand);
+}
+.prose strong {
+  font-weight: 700;
+  color: var(--ink);
+}
+.prose a {
+  color: var(--secondary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break: break-word;
+}
+@media (hover: hover) and (pointer: fine) {
+  .prose a:hover {
+    color: var(--brand);
+  }
 }
 
 /* ===========================================================================
@@ -640,6 +902,7 @@
 .sheet__body {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   padding: 0 var(--s5) var(--s5);
 }
 
@@ -701,6 +964,9 @@
   color: var(--ink);
   margin-bottom: var(--s1);
 }
+.empty__action {
+  margin-top: var(--s4);
+}
 .chip {
   display: inline-flex;
   align-items: center;
@@ -711,6 +977,178 @@
   font-size: var(--t-small);
   font-weight: 600;
   color: var(--ink-2);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chip--session {
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-weight: 800;
+}
+.chip--link {
+  border: 2px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  text-decoration: none;
+  transition: transform 140ms var(--ease-out), background 140ms var(--ease-out),
+    color 140ms var(--ease-out);
+}
+.chip--link:active {
+  transform: scale(0.97);
+}
+@media (hover: hover) and (pointer: fine) {
+  .chip--link:hover {
+    background: var(--brand);
+    color: var(--brand-ink);
+  }
+}
+
+/* ===========================================================================
+   Wall header
+=========================================================================== */
+.wall-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s4);
+  margin: var(--s2) 0 var(--s5);
+}
+.wall-head--self {
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.wall-head__avatar {
+  position: relative;
+  flex-shrink: 0;
+}
+.wall-head__camera {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  background: var(--brand);
+  color: var(--brand-ink);
+  border: 2px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+.wall-head__text {
+  flex: 1;
+  min-width: 0;
+}
+.wall-head__name {
+  font-family: var(--font-heading);
+  font-size: var(--t-title);
+  font-weight: 700;
+  line-height: 1.15;
+}
+.wall-head__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin-top: var(--s2);
+}
+.wall-head--self .wall-head__meta {
+  justify-content: center;
+}
+.wall-head__tagline {
+  margin-top: var(--s3);
+  color: var(--ink-2);
+  font-size: var(--t-sub);
+  line-height: 1.4;
+}
+.wall-head__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin-top: var(--s4);
+}
+.wall-head--self .wall-head__actions {
+  justify-content: center;
+}
+
+/* ===========================================================================
+   Give a sticky
+=========================================================================== */
+.give__to {
+  color: var(--brand);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.give__loading,
+.give__none {
+  padding: var(--s4);
+  text-align: center;
+  color: var(--ink-3);
+  font-size: var(--t-small);
+}
+.give__hint {
+  color: var(--ink-3);
+  font-size: var(--t-tiny);
+  padding: var(--s2) var(--s1) var(--s4);
+}
+.give__thumb {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--r-sm);
+  object-fit: cover;
+  border: 2px solid var(--border);
+}
+.give__add-photo {
+  width: 100%;
+  color: var(--brand);
+  text-align: left;
+}
+.give .group,
+.give .segmented,
+.give > .field {
+  margin-bottom: var(--s4);
+}
+
+/* Horizontal recipient picker */
+.picker {
+  display: flex;
+  gap: var(--s3);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  padding: var(--s3) 2px var(--s4);
+  margin-bottom: var(--s2);
+}
+.picker__item {
+  flex: 0 0 auto;
+  width: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  scroll-snap-align: start;
+  opacity: 0.55;
+  transition: opacity 160ms var(--ease-out), transform 160ms var(--ease-out);
+}
+.picker__item:active {
+  transform: scale(0.96);
+}
+.picker__item--on {
+  opacity: 1;
+}
+.picker__item--on .avatar {
+  border-color: var(--brand);
+  box-shadow: 3px 3px 0 0 var(--brand);
+}
+.picker__name {
+  font-size: var(--t-tiny);
+  font-weight: 600;
+  text-align: center;
+  max-width: 64px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (hover: hover) and (pointer: fine) {
+  .picker__item:hover {
+    opacity: 1;
+  }
 }
 .login-logo {
   font-size: 68px;
@@ -722,6 +1160,40 @@
   width: 100%;
   max-width: 390px;
   margin-top: var(--s6);
+}
+.login-title {
+  font-size: var(--t-display);
+  font-weight: 700;
+  letter-spacing: -0.4px;
+}
+.login-sub {
+  color: var(--ink-2);
+  max-width: 340px;
+  margin-top: var(--s2);
+}
+.login-error {
+  color: var(--danger);
+  font-size: var(--t-sub);
+  font-weight: 600;
+  margin-top: var(--s4);
+}
+.login-form__action {
+  padding: var(--s3) var(--s4) var(--s4);
+}
+.login-done {
+  padding: var(--s5);
+  text-align: center;
+  color: var(--ink-2);
+}
+.login-done__emoji {
+  font-size: 32px;
+  margin-bottom: var(--s2);
+}
+.login-foot {
+  text-align: center;
+  color: var(--ink-3);
+  font-size: var(--t-tiny);
+  margin-top: var(--s3);
 }
 
 /* ===========================================================================

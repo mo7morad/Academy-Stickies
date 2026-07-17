@@ -10,6 +10,7 @@ import { Spinner } from "./components/controls";
 import { navigate, useHashRoute } from "./router";
 import { GiveSticky } from "./views/GiveSticky";
 import { Login } from "./views/Login";
+import { Mentors } from "./views/Mentors";
 import { Roster } from "./views/Roster";
 import { Wall } from "./views/Wall";
 
@@ -37,6 +38,30 @@ function useTheme(): { theme: Theme; toggle: () => void } {
   }, []);
 
   return { theme, toggle };
+}
+
+/** Plain anchors so the tabs are real, keyboard-navigable links. */
+function DirectoryTabs({ active }: { active: "roster" | "mentors" }) {
+  return (
+    <nav class="tabs" aria-label="Directory">
+      <div class="tabs__inner">
+        <a
+          class="tabs__tab"
+          href="#/"
+          aria-current={active === "roster" ? "page" : undefined}
+        >
+          Learners
+        </a>
+        <a
+          class="tabs__tab"
+          href="#/mentors"
+          aria-current={active === "mentors" ? "page" : undefined}
+        >
+          Mentors
+        </a>
+      </div>
+    </nav>
+  );
 }
 
 export function App() {
@@ -81,17 +106,23 @@ export function App() {
   if (me === null) return <Login />;
 
   let content: JSX.Element;
-  if (route.name === "roster") {
+  if (route.name === "roster" || route.name === "mentors") {
+    const onMentors = route.name === "mentors";
     content = (
       <>
         <Nav
           title="Academy"
-          subtitle="Sticky notes between us"
+          subtitle={onMentors ? "Our mentors" : "Sticky notes between us"}
           right={
             <HeaderActions theme={theme} onToggleTheme={toggle} onLogout={logout} />
           }
         />
-        <Roster refreshSignal={refresh} onGive={openGive} />
+        <DirectoryTabs active={route.name} />
+        {onMentors ? (
+          <Mentors />
+        ) : (
+          <Roster refreshSignal={refresh} onGive={openGive} />
+        )}
       </>
     );
   } else {

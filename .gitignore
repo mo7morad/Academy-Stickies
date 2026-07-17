@@ -10,6 +10,9 @@ npm-debug.log*
 # Private Data (student PII — never commit; repo is public)
 seed/roster.json
 learners-emails.json
+learners-profiels/
+Cohort/
+.cohort-media/
 
 # Tooling Output
 graphify-out/

@@ -19,6 +19,14 @@
   --r-wobbly-sm: 8px 3px 6px 4px / 4px 6px 3px 8px;
   --r-pill: 999px; /* Can still use pill for tiny badges if needed */
 
+  /* Plain radii — for surfaces where a wobble would read as a rendering bug
+     (sheets, thumbnails, media). Referenced widely; previously undefined,
+     which silently dropped the whole border-radius declaration. */
+  --r-xs: 6px;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-xl: 24px;
+
   /* Spacing */
   --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
   --s5: 20px; --s6: 24px; --s8: 32px; --s10: 40px;
@@ -82,10 +90,12 @@
   --sp-4: var(--s4);
   --sp-5: var(--s5);
   --sp-6: var(--s6);
+  --text-title1: var(--t-display);
   --text-title2: var(--t-title);
   --text-title3: var(--t-heading);
   --text-subhead: var(--t-sub);
   --text-footnote: var(--t-tiny);
+  --text-caption: var(--t-tiny);
   --label: var(--ink);
   --label-secondary: var(--ink-2);
   --label-tertiary: var(--ink-3);
