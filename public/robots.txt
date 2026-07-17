@@ -1,0 +1,4 @@
+# Academy Stickies is invite-only: every route behind / requires a session.
+# There is nothing here to index, and member profiles must never be crawled.
+User-agent: *
+Disallow: /

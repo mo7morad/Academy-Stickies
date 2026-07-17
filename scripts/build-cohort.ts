@@ -28,7 +28,13 @@ import { d1ExecFile, isRemote, sqlQuote } from "./util";
 const COHORT_DIR = "Cohort";
 const MEDIA_DIR = ".cohort-media";
 const SQL_FILE = "scripts/.generated.cohort.sql";
-const PHOTO_PX = 400; // 2x the largest avatar we render (104px) with room to spare
+
+// Two sizes, because one cannot serve both jobs well:
+//   full  — profile headers (104-132px, so 400 covers 3x)
+//   thumb — the roster's 66px grid of 200+ faces (144 covers 2x)
+// Serving `full` into the roster wasted ~709 KiB per mobile load.
+const PHOTO_PX = 400;
+const THUMB_PX = 144;
 
 interface CohortEntry {
   full_name: string;
@@ -62,6 +68,7 @@ interface Person {
   sections: Section[];
   links: Link[];
   photoKey: string | null;
+  thumbKey: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -279,7 +286,10 @@ function cleanNickname(raw: string | null, displayName: string): string | null {
 function parseProfile(
   md: string,
   name: string,
-): Omit<Person, "slug" | "email" | "session" | "photoKey" | "name"> & {
+): Omit<
+  Person,
+  "slug" | "email" | "session" | "photoKey" | "thumbKey" | "name"
+> & {
   tableName: string | null;
 } {
   // Drop embedded photos — we serve optimized copies from R2 instead.
@@ -400,34 +410,56 @@ function imageSize(file: string): { w: number; h: number } | null {
   }
 }
 
-/** Centre-crop to a square and encode a small WebP that R2 will serve. */
-function buildPhoto(src: string, destDir: string, slug: string): string | null {
-  if (!existsSync(src)) return null;
-  const size = imageSize(src);
-  if (!size) return null;
-
-  const side = Math.min(size.w, size.h);
-  const x = Math.round((size.w - side) / 2);
-  const y = Math.round((size.h - side) / 2);
-  const out = join(destDir, `${slug}.webp`);
-
+function encode(
+  src: string,
+  out: string,
+  crop: { x: number; y: number; side: number },
+  px: number,
+  quality: string,
+): boolean {
   try {
     execFileSync(
       "cwebp",
       [
         "-quiet",
-        "-q", "78",
-        "-crop", String(x), String(y), String(side), String(side),
-        "-resize", String(PHOTO_PX), String(PHOTO_PX),
+        "-q", quality,
+        // cwebp crops before resizing, so this squares the frame first.
+        "-crop", String(crop.x), String(crop.y), String(crop.side), String(crop.side),
+        "-resize", String(px), String(px),
         src,
         "-o", out,
       ],
       { stdio: ["ignore", "ignore", "pipe"] },
     );
-    return out;
+    return true;
   } catch {
-    return null;
+    return false;
   }
+}
+
+/** Centre-crop to a square and encode both the full and thumb WebP variants. */
+function buildPhoto(
+  src: string,
+  destDir: string,
+  slug: string,
+): { full: boolean; thumb: boolean } {
+  if (!existsSync(src)) return { full: false, thumb: false };
+  const size = imageSize(src);
+  if (!size) return { full: false, thumb: false };
+
+  const side = Math.min(size.w, size.h);
+  const crop = {
+    x: Math.round((size.w - side) / 2),
+    y: Math.round((size.h - side) / 2),
+    side,
+  };
+
+  return {
+    full: encode(src, join(destDir, `${slug}.webp`), crop, PHOTO_PX, "78"),
+    // Thumbs are shown at 66px; a lower quality is invisible there and halves
+    // the bytes again across 200+ faces.
+    thumb: encode(src, join(destDir, `${slug}_sm.webp`), crop, THUMB_PX, "72"),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -474,7 +506,8 @@ function loadGroup(
       name: displayName,
       email: (e.email || "").trim().toLowerCase(),
       session: (e.session || "").trim().toUpperCase(),
-      photoKey: photo ? `${mediaSub}/${key}.webp` : null,
+      photoKey: photo.full ? `${mediaSub}/${key}.webp` : null,
+      thumbKey: photo.thumb ? `${mediaSub}/${key}_sm.webp` : null,
     });
   }
   return people;
@@ -507,29 +540,33 @@ function main() {
       continue;
     }
     sql.push(
-      `INSERT INTO profiles (member_id, slug, session, tagline, photo_key, intro, sections, links, updated_at)\n` +
+      `INSERT INTO profiles (member_id, slug, session, tagline, photo_key, thumb_key, intro, sections, links, updated_at)\n` +
         `SELECT m.id, ${sqlQuote(p.slug)}, ${p.session ? sqlQuote(p.session) : "NULL"}, ` +
-        `${sqlQuote(p.tagline)}, ${p.photoKey ? sqlQuote(p.photoKey) : "NULL"}, ${sqlQuote(p.intro)}, ` +
+        `${sqlQuote(p.tagline)}, ${p.photoKey ? sqlQuote(p.photoKey) : "NULL"}, ` +
+        `${p.thumbKey ? sqlQuote(p.thumbKey) : "NULL"}, ${sqlQuote(p.intro)}, ` +
         `${sqlQuote(JSON.stringify(p.sections))}, ${sqlQuote(JSON.stringify(p.links))}, ${now}\n` +
         `FROM members m WHERE lower(m.email) = ${sqlQuote(p.email)}\n` +
         `ON CONFLICT(member_id) DO UPDATE SET slug=excluded.slug, session=excluded.session, ` +
-        `tagline=excluded.tagline, photo_key=excluded.photo_key, intro=excluded.intro, ` +
-        `sections=excluded.sections, links=excluded.links, updated_at=excluded.updated_at;`,
+        `tagline=excluded.tagline, photo_key=excluded.photo_key, thumb_key=excluded.thumb_key, ` +
+        `intro=excluded.intro, sections=excluded.sections, links=excluded.links, ` +
+        `updated_at=excluded.updated_at;`,
     );
   }
 
   mentors.forEach((p, i) => {
     sql.push(
-      `INSERT INTO mentors (id, slug, name, nickname, role, skills, tagline, photo_key, intro, sections, links, sort_order, updated_at)\n` +
+      `INSERT INTO mentors (id, slug, name, nickname, role, skills, tagline, photo_key, thumb_key, intro, sections, links, sort_order, updated_at)\n` +
         `VALUES (${sqlQuote(randomUUID())}, ${sqlQuote(p.slug)}, ${sqlQuote(p.name)}, ` +
         `${p.nickname ? sqlQuote(p.nickname) : "NULL"}, ${p.role ? sqlQuote(p.role) : "NULL"}, ` +
         `${sqlQuote(JSON.stringify(p.skills))}, ${sqlQuote(p.tagline)}, ` +
-        `${p.photoKey ? sqlQuote(p.photoKey) : "NULL"}, ${sqlQuote(p.intro)}, ` +
+        `${p.photoKey ? sqlQuote(p.photoKey) : "NULL"}, ` +
+        `${p.thumbKey ? sqlQuote(p.thumbKey) : "NULL"}, ${sqlQuote(p.intro)}, ` +
         `${sqlQuote(JSON.stringify(p.sections))}, ${sqlQuote(JSON.stringify(p.links))}, ${i}, ${now})\n` +
         `ON CONFLICT(slug) DO UPDATE SET name=excluded.name, nickname=excluded.nickname, ` +
         `role=excluded.role, skills=excluded.skills, tagline=excluded.tagline, ` +
-        `photo_key=excluded.photo_key, intro=excluded.intro, sections=excluded.sections, ` +
-        `links=excluded.links, sort_order=excluded.sort_order, updated_at=excluded.updated_at;`,
+        `photo_key=excluded.photo_key, thumb_key=excluded.thumb_key, intro=excluded.intro, ` +
+        `sections=excluded.sections, links=excluded.links, sort_order=excluded.sort_order, ` +
+        `updated_at=excluded.updated_at;`,
     );
   });
 

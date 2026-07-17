@@ -50,6 +50,7 @@ export interface Mentor {
   skills: string[];
   tagline: string | null;
   photoUrl: string | null;
+  thumbUrl: string | null;
   intro: string;
   sections: ProfileSection[];
   links: ProfileLink[];
@@ -58,7 +59,10 @@ export interface Mentor {
 export interface RosterMember {
   id: string;
   name: string;
+  /** Full-size (400px) — for profile headers. */
   avatarUrl: string | null;
+  /** 144px variant — for the roster grid and pickers. Falls back to avatarUrl. */
+  thumbUrl: string | null;
   wallPublic: boolean;
   isSelf: boolean;
   receivedCount: number;

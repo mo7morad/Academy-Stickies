@@ -46,9 +46,12 @@
   --ink-3: rgba(45, 45, 45, 0.6); 
   --ink-muted: #e5e0d8;   /* Old Paper / Erased Pencil */
   
-  --brand: #ff4d4d;       /* Red Correction Marker */
+  /* Red Correction Marker. Darkened from #ff4d4d: paired with --brand-ink it
+     only reached 2.68:1, so the FAB and active tab failed WCAG AA. This is
+     4.8:1 and still reads as the same marker red. */
+  --brand: #d32f2f;
   --brand-ink: #fdfbf7;
-  --brand-soft: rgba(255, 77, 77, 0.12);
+  --brand-soft: rgba(211, 47, 47, 0.12);
   
   --secondary: #2d5da1;   /* Blue Ballpoint Pen */
   --secondary-ink: #fdfbf7;
@@ -56,8 +59,9 @@
   --border: #2d2d2d;      /* Pencil Lead */
   --border-strong: #2d2d2d;
   
-  --accent: #ff4d4d;
-  --danger: #ff4d4d;
+  /* Also used as text on the paper background, where #ff4d4d was only 3.2:1. */
+  --accent: #d32f2f;
+  --danger: #d32f2f;
   --success: #16b364;
 
   --bar: rgba(253, 251, 247, 0.85);
@@ -112,8 +116,10 @@
     --ink-3: rgba(253, 251, 247, 0.6);
     --ink-muted: #2d2d2d;
     
+    /* Dark mode keeps the lighter red for legibility on the dark canvas, so the
+       contrast fix inverts: dark ink on red (6:1) instead of cream on red. */
     --brand: #ff6b6b;
-    --brand-ink: #fdfbf7;
+    --brand-ink: #1e1e1e;
     --brand-soft: rgba(255, 107, 107, 0.16);
     
     --secondary: #4a80d6;
@@ -148,8 +154,9 @@
   --ink-3: rgba(253, 251, 247, 0.6);
   --ink-muted: #2d2d2d;
   
+  /* Mirrors the dark block above: dark ink on the lighter red. */
   --brand: #ff6b6b;
-  --brand-ink: #fdfbf7;
+  --brand-ink: #1e1e1e;
   --brand-soft: rgba(255, 107, 107, 0.16);
   
   --secondary: #4a80d6;

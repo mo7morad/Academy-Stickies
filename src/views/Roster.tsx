@@ -110,7 +110,7 @@ export function Roster({
                 onClick={() => navigate(m.isSelf ? "/me" : `/m/${m.id}`)}
                 title={m.tagline ?? undefined}
               >
-                <Avatar name={m.name} url={m.avatarUrl} size="lg" eager={i < 8} />
+                <Avatar name={m.name} url={m.thumbUrl} size="lg" eager={i < 8} />
                 <div class="member-card__name">{m.isSelf ? "You" : m.name}</div>
                 <div class="member-card__meta">
                   {m.isSelf && <span class="badge-you">Your wall</span>}

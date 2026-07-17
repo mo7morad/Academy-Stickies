@@ -128,7 +128,7 @@ export function GiveSticky({
                     class={`picker__item ${selected ? "picker__item--on" : ""}`}
                     onClick={() => setRecipientId(m.id)}
                   >
-                    <Avatar name={m.name} url={m.avatarUrl} size="md" />
+                    <Avatar name={m.name} url={m.thumbUrl} size="md" />
                     <span class="picker__name">{m.name.split(" ")[0]}</span>
                   </button>
                 );

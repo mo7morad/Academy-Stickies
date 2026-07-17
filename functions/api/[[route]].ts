@@ -50,6 +50,7 @@ interface MemberRow {
   created_at: number;
   last_login_at: number | null;
   photo_key: string | null; // joined from profiles — the cohort photo
+  thumb_key: string | null;
 }
 
 type Variables = { member: MemberRow };
@@ -86,6 +87,18 @@ function avatarUrl(m: {
   return mediaUrl(m.avatar_key ?? m.photo_key ?? null);
 }
 
+/**
+ * Small variant for lists. An uploaded avatar has no thumb (the browser sends a
+ * single 512px crop), so it stands in for itself.
+ */
+function thumbUrl(m: {
+  avatar_key: string | null;
+  thumb_key?: string | null;
+  photo_key?: string | null;
+}): string | null {
+  return mediaUrl(m.avatar_key ?? m.thumb_key ?? m.photo_key ?? null);
+}
+
 /** Profile prose is stored as JSON text in D1; never let a bad row 500 a page. */
 function parseJson<T>(raw: string | null, fallback: T): T {
   if (!raw) return fallback;
@@ -115,7 +128,7 @@ async function requireAuth(c: AppContext, next: Next) {
   if (!memberId) return c.json({ error: "unauthorized" }, 401);
 
   const member = await c.env.DB.prepare(
-    `SELECT m.*, p.photo_key
+    `SELECT m.*, p.photo_key, p.thumb_key
      FROM members m LEFT JOIN profiles p ON p.member_id = m.id
      WHERE m.id = ?`,
   )
@@ -259,6 +272,7 @@ interface RosterRow {
   wall_public: number;
   received_count: number;
   photo_key: string | null;
+  thumb_key: string | null;
   session: string | null;
   tagline: string | null;
 }
@@ -268,6 +282,7 @@ function toRosterMember(r: RosterRow, meId: string): RosterMember {
     id: r.id,
     name: r.name,
     avatarUrl: avatarUrl(r),
+    thumbUrl: thumbUrl(r),
     wallPublic: r.wall_public === 1,
     isSelf: r.id === meId,
     receivedCount: r.received_count,
@@ -282,7 +297,7 @@ app.get("/members", requireAuth, async (c) => {
   const me = c.get("member");
   const rows = await c.env.DB.prepare(
     `SELECT m.id, m.name, m.avatar_key, m.wall_public,
-            p.photo_key, p.session, p.tagline,
+            p.photo_key, p.thumb_key, p.session, p.tagline,
             (SELECT COUNT(*) FROM stickies s WHERE s.recipient_id = m.id) AS received_count
      FROM members m
      LEFT JOIN profiles p ON p.member_id = m.id
@@ -297,7 +312,7 @@ app.get("/members", requireAuth, async (c) => {
 // wall and cannot be given stickies, so this is a plain list.
 app.get("/mentors", requireAuth, async (c) => {
   const rows = await c.env.DB.prepare(
-    `SELECT id, slug, name, nickname, role, skills, tagline, photo_key, intro, sections, links
+    `SELECT id, slug, name, nickname, role, skills, tagline, photo_key, thumb_key, intro, sections, links
      FROM mentors
      ORDER BY sort_order ASC, name COLLATE NOCASE ASC`,
   ).all<{
@@ -309,6 +324,7 @@ app.get("/mentors", requireAuth, async (c) => {
     skills: string;
     tagline: string | null;
     photo_key: string | null;
+    thumb_key: string | null;
     intro: string | null;
     sections: string;
     links: string;
@@ -323,6 +339,7 @@ app.get("/mentors", requireAuth, async (c) => {
     skills: parseJson<string[]>(r.skills, []),
     tagline: r.tagline,
     photoUrl: mediaUrl(r.photo_key),
+    thumbUrl: mediaUrl(r.thumb_key ?? r.photo_key),
     intro: r.intro ?? "",
     sections: parseJson<ProfileSection[]>(r.sections, []),
     links: parseJson<ProfileLink[]>(r.links, []),
@@ -336,7 +353,7 @@ app.get("/members/:id", requireAuth, async (c) => {
 
   const member = await c.env.DB.prepare(
     `SELECT m.id, m.name, m.avatar_key, m.wall_public,
-            p.photo_key, p.session, p.tagline, p.intro, p.sections, p.links,
+            p.photo_key, p.thumb_key, p.session, p.tagline, p.intro, p.sections, p.links,
             (SELECT COUNT(*) FROM stickies s WHERE s.recipient_id = m.id) AS received_count
      FROM members m
      LEFT JOIN profiles p ON p.member_id = m.id

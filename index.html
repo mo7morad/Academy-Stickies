@@ -13,11 +13,21 @@
     <meta name="color-scheme" content="light dark" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="description" content="A private board of sticky notes between academy members." />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Fonts are self-hosted (see src/styles/fonts.css); preload just the two
+         latin subsets that every first paint needs. -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Kalam:wght@700&family=Patrick+Hand&display=swap"
-      rel="stylesheet"
+      rel="preload"
+      href="/fonts/PatrickHand-400-latin.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/fonts/Kalam-700-latin.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
     />
     <title>Academy Stickies</title>
   </head>
