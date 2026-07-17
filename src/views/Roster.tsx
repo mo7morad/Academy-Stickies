@@ -16,6 +16,7 @@ export function Roster({
 }) {
   const toast = useToast();
   const [members, setMembers] = useState<RosterMember[] | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -34,6 +35,10 @@ export function Roster({
     navigate(m.isSelf ? "/me" : `/m/${m.id}`);
   }
 
+  const filteredMembers = members?.filter((m) =>
+    m.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <main class="page">
       <p style="color:var(--label-secondary);margin:var(--sp-1) var(--sp-1) var(--sp-2);">
@@ -41,13 +46,29 @@ export function Roster({
         <strong style="color:var(--label);">New Sticky</strong> to leave a note.
       </p>
 
+      <div style="margin-bottom: var(--s4);">
+        <input
+          type="search"
+          class="field"
+          placeholder="Search members..."
+          value={searchQuery}
+          onInput={(e) => setSearchQuery((e.currentTarget as HTMLInputElement).value)}
+        />
+      </div>
+
       {!members ? (
         <div class="center-screen">
           <Spinner />
         </div>
+      ) : filteredMembers?.length === 0 ? (
+        <div class="empty">
+          <div class="empty__emoji">🔍</div>
+          <div class="empty__title">No members found</div>
+          <p>We couldn't find anyone matching "{searchQuery}".</p>
+        </div>
       ) : (
         <div class="roster">
-          {members.map((m) => (
+          {filteredMembers?.map((m) => (
             <button key={m.id} class={`member-card ${m.isSelf ? "member-card--self" : ""}`} onClick={() => openMember(m)}>
               <Avatar name={m.name} url={m.avatarUrl} size="lg" />
               <div class="member-card__name">{m.isSelf ? "You" : m.name}</div>

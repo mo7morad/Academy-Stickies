@@ -33,8 +33,18 @@ export function Wall({
   const toast = useToast();
   const [wall, setWall] = useState<WallResponse | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const isSelf = memberId === me.id;
+
+  const filteredStickies = wall?.stickies.filter((s) => {
+    const q = searchQuery.toLowerCase();
+    return (
+      s.describedAs?.toLowerCase().includes(q) ||
+      s.goodAt?.toLowerCase().includes(q) ||
+      s.authorName?.toLowerCase().includes(q)
+    );
+  }) ?? [];
 
   async function load() {
     try {
@@ -161,16 +171,35 @@ export function Wall({
                 </p>
               </div>
             ) : (
-              <div class="wall">
-                {wall.stickies.map((s) => (
-                  <StickyNote
-                    key={s.id}
-                    sticky={s}
-                    canDelete={isSelf}
-                    onDelete={removeSticky}
+              <>
+                <div style="margin-bottom: var(--s4);">
+                  <input
+                    type="search"
+                    class="field"
+                    placeholder="Search stickies..."
+                    value={searchQuery}
+                    onInput={(e) => setSearchQuery((e.currentTarget as HTMLInputElement).value)}
                   />
-                ))}
-              </div>
+                </div>
+                {filteredStickies.length === 0 ? (
+                  <div class="empty">
+                    <div class="empty__emoji">🔍</div>
+                    <div class="empty__title">No stickies found</div>
+                    <p>We couldn't find any stickies matching "{searchQuery}".</p>
+                  </div>
+                ) : (
+                  <div class="wall">
+                    {filteredStickies.map((s) => (
+                      <StickyNote
+                        key={s.id}
+                        sticky={s}
+                        canDelete={isSelf}
+                        onDelete={removeSticky}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </>
         )}
