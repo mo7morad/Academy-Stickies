@@ -71,7 +71,7 @@ export function Login() {
                 type="email"
                 inputMode="email"
                 autoComplete="email"
-                placeholder="you@academy.email"
+                placeholder="you@binb.idserve.net"
                 value={email}
                 onInput={(e) => setEmail((e.target as HTMLInputElement).value)}
                 aria-label="Academy email"
