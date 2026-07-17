@@ -4,6 +4,7 @@ import { getMembers } from "../api";
 import { Avatar } from "../components/Avatar";
 import { Segmented, Spinner } from "../components/controls";
 import { Icon } from "../components/Icon";
+import { Pagination } from "../components/Pagination";
 import { navigate } from "../router";
 import { useToast } from "../toast";
 
@@ -136,36 +137,7 @@ export function Roster({
               </button>
             ))}
           </div>
-          {totalPages > 1 && (
-            <div class="pagination" style={{ display: "flex", gap: "8px", justifyContent: "center", margin: "var(--s6) 0" }}>
-              <button
-                class="btn btn--tinted"
-                disabled={page === 1}
-                onClick={() => setPage(p => p - 1)}
-                style={{ padding: "8px 12px", minHeight: "0" }}
-              >
-                Prev
-              </button>
-              {Array.from({ length: totalPages }).map((_, i) => (
-                <button
-                  key={i}
-                  class={page === i + 1 ? "btn btn--filled" : "btn btn--tinted"}
-                  onClick={() => setPage(i + 1)}
-                  style={{ padding: "8px 12px", minHeight: "0" }}
-                >
-                  {i + 1}
-                </button>
-              ))}
-              <button
-                class="btn btn--tinted"
-                disabled={page === totalPages}
-                onClick={() => setPage(p => p + 1)}
-                style={{ padding: "8px 12px", minHeight: "0" }}
-              >
-                Next
-              </button>
-            </div>
-          )}
+          <Pagination page={page} totalPages={totalPages} setPage={setPage} />
         </>
       )}
 

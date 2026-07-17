@@ -134,7 +134,7 @@
   gap: var(--s2);
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 var(--s2);
+  padding: 0 var(--s2) 0 4px;
 }
 .navbar__side {
   display: flex;
@@ -1279,4 +1279,49 @@
 
 @media (prefers-reduced-motion: reduce) {
   .member-card, .sticky { animation: none; }
+}
+
+/* ===========================================================================
+   Pagination
+=========================================================================== */
+.pagination {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin: var(--s6) 0;
+}
+.pagination-btn {
+  padding: 8px 12px;
+  min-height: 0;
+}
+
+/* ===========================================================================
+   Empty States
+=========================================================================== */
+.empty--private {
+  padding: var(--s4) 0;
+  margin-bottom: var(--s4);
+  border-bottom: 2px dashed var(--ink-muted);
+}
+
+/* ===========================================================================
+   App Footer
+=========================================================================== */
+.app-footer {
+  text-align: center;
+  padding: var(--s4) var(--s2);
+  margin-top: var(--s6);
+  color: var(--ink-muted);
+  font-size: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.app-footer a {
+  color: var(--ink);
+  text-decoration: underline;
+  font-weight: 500;
+}
+
+.app-footer a:hover {
+  text-decoration: none;
 }

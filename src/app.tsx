@@ -145,6 +145,10 @@ export function App() {
     <>
       {content}
 
+      <footer class="app-footer">
+        Made by <a href="#/m/mo7morad">Morad</a>, <a href="#/m/javhoir">John</a>, and <a href="#/m/keneth">Ken</a>
+      </footer>
+
       <button class="fab" onClick={() => openGive()} aria-label="New sticky">
         <Icon name="plus" size={20} />
         New Sticky
