@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { Me, RosterMember } from "../../shared/types";
 import { MAX_FIELD_LEN, STICKY_COLORS } from "../../shared/types";
-import { createSticky, getMembers } from "../api";
+import { createSticky, getMembers, getMentors } from "../api";
 import { Avatar } from "../components/Avatar";
 import { Icon } from "../components/Icon";
 import { Segmented, Spinner } from "../components/controls";
@@ -30,8 +30,21 @@ export function GiveSticky({
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    getMembers()
-      .then((m) => setMembers(m.filter((x) => !x.isSelf)))
+    Promise.all([getMembers(), getMentors()])
+      .then(([m, mt]) => {
+        const mentorsAsMembers: RosterMember[] = mt.map((mentor) => ({
+          id: mentor.id,
+          name: mentor.name,
+          avatarUrl: mentor.photoUrl,
+          thumbUrl: mentor.thumbUrl,
+          wallPublic: true,
+          isSelf: false,
+          receivedCount: 0,
+          session: mentor.role,
+          tagline: mentor.tagline,
+        }));
+        setMembers([...m.filter((x) => !x.isSelf), ...mentorsAsMembers]);
+      })
       .catch(() => toast("Couldn't load members.", "error"));
   }, []);
 

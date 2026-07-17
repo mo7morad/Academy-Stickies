@@ -20,6 +20,8 @@ export function Roster({
   const [members, setMembers] = useState<RosterMember[] | null>(null);
   const [query, setQuery] = useState("");
   const [session, setSession] = useState<SessionFilter>("all");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 24;
 
   useEffect(() => {
     let alive = true;
@@ -53,6 +55,17 @@ export function Roster({
     () => members?.some((m) => m.session) ?? false,
     [members],
   );
+
+  useEffect(() => {
+    setPage(1);
+  }, [query, session]);
+
+  const visibleMembers = useMemo(() => {
+    if (!filtered) return null;
+    return filtered.slice(0, page * PAGE_SIZE);
+  }, [filtered, page]);
+
+  const hasMore = filtered && visibleMembers && visibleMembers.length < filtered.length;
 
   return (
     <main class="page">
@@ -103,7 +116,7 @@ export function Roster({
             {filtered?.length} {filtered?.length === 1 ? "person" : "people"}
           </div>
           <div class="roster">
-            {filtered?.map((m, i) => (
+            {visibleMembers?.map((m, i) => (
               <button
                 key={m.id}
                 class={`member-card ${m.isSelf ? "member-card--self" : ""}`}
@@ -123,6 +136,13 @@ export function Roster({
               </button>
             ))}
           </div>
+          {hasMore && (
+            <div class="page__footer-action" style={{ marginTop: "var(--s4)", marginBottom: "var(--s4)" }}>
+              <button class="btn btn--tinted" onClick={() => setPage((p) => p + 1)}>
+                Load More
+              </button>
+            </div>
+          )}
         </>
       )}
 

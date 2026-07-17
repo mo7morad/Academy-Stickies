@@ -351,7 +351,7 @@ app.get("/members/:id", requireAuth, async (c) => {
   const me = c.get("member");
   const id = c.req.param("id");
 
-  const member = await c.env.DB.prepare(
+  let member = await c.env.DB.prepare(
     `SELECT m.id, m.name, m.avatar_key, m.wall_public,
             p.photo_key, p.thumb_key, p.session, p.tagline, p.intro, p.sections, p.links,
             (SELECT COUNT(*) FROM stickies s WHERE s.recipient_id = m.id) AS received_count
@@ -367,10 +367,53 @@ app.get("/members/:id", requireAuth, async (c) => {
         links: string | null;
       }
     >();
-  if (!member) return c.json({ error: "not found" }, 404);
+
+  let isMentor = false;
+
+  if (!member) {
+    const mentor = await c.env.DB.prepare(
+      `SELECT id, slug, name, nickname, role, skills, tagline, photo_key, thumb_key, intro, sections, links,
+              (SELECT COUNT(*) FROM stickies s WHERE s.recipient_id = mentors.id) AS received_count
+       FROM mentors
+       WHERE id = ?`,
+    )
+      .bind(id)
+      .first<{
+        id: string;
+        name: string;
+        nickname: string | null;
+        role: string | null;
+        skills: string;
+        tagline: string | null;
+        photo_key: string | null;
+        thumb_key: string | null;
+        intro: string | null;
+        sections: string;
+        links: string;
+        received_count: number;
+      }>();
+
+    if (!mentor) return c.json({ error: "not found" }, 404);
+
+    isMentor = true;
+    member = {
+      id: mentor.id,
+      name: mentor.name,
+      avatar_key: mentor.photo_key,
+      wall_public: 1, // Mentor walls are public
+      photo_key: mentor.photo_key,
+      thumb_key: mentor.thumb_key,
+      session: mentor.role, // show role instead of AM/PM session
+      tagline: mentor.tagline,
+      intro: mentor.intro,
+      sections: mentor.sections,
+      links: mentor.links,
+      received_count: mentor.received_count,
+    };
+  }
 
   const isSelf = member.id === me.id;
-  const visible = isSelf || member.wall_public === 1;
+  const visible = isSelf || member.wall_public === 1 || isMentor;
   const rosterMember = toRosterMember(member, me.id);
 
   // A profile introduces someone to the cohort, so it stays readable even when
@@ -471,11 +514,19 @@ app.post("/stickies", requireAuth, async (c) => {
     return c.json({ error: "Write at least one of the two fields." }, 400);
   }
 
-  const recipient = await c.env.DB.prepare(
+  let recipient = await c.env.DB.prepare(
     "SELECT id, name, email FROM members WHERE id = ?",
   )
     .bind(recipientId)
     .first<{ id: string; name: string; email: string }>();
+
+  if (!recipient) {
+    recipient = await c.env.DB.prepare(
+      "SELECT id, name, email FROM mentors WHERE id = ?",
+    )
+      .bind(recipientId)
+      .first<{ id: string; name: string; email: string }>();
+  }
   if (!recipient) return c.json({ error: "recipient not found" }, 404);
 
   const stickyId = newId();

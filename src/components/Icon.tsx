@@ -1,7 +1,7 @@
 // SF-Symbols-inspired inline icons (stroke style, rounded caps).
 import type { JSX } from "preact";
 
-type IconName =
+export type IconName =
   | "plus"
   | "back"
   | "close"
@@ -15,7 +15,11 @@ type IconName =
   | "check"
   | "paperplane"
   | "globe"
-  | "sparkles";
+  | "sparkles"
+  | "github"
+  | "linkedin"
+  | "twitter"
+  | "instagram";
 
 const PATHS: Record<IconName, JSX.Element> = {
   plus: <path d="M12 5v14M5 12h14" />,
@@ -68,6 +72,26 @@ const PATHS: Record<IconName, JSX.Element> = {
   ),
   sparkles: (
     <path d="M12 3l1.8 4.7L18.5 9.5 13.8 11.3 12 16l-1.8-4.7L5.5 9.5l4.7-1.8zM18 15l.9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9z" />
+  ),
+  github: (
+    <path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0 -.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2V21" />
+  ),
+  linkedin: (
+    <>
+      <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0 -2 -2 2 2 0 0 0 -2 2v7h-4v-7a6 6 0 0 1 6 -6z" />
+      <rect x="2" y="9" width="4" height="12" />
+      <circle cx="4" cy="4" r="2" />
+    </>
+  ),
+  twitter: (
+    <path d="M22 4.01c-1 .49 -1.98 .689 -3 .99c-1.121 -1.265 -2.783 -1.335 -4.38 -.737S11.977 6.323 12 8v1c-3.245 .083 -6.135 -1.395 -8 -4c0 0 -4.182 7.433 4 11c-1.872 1.247 -3.739 2.088 -6 2c3.308 1.803 6.913 2.423 10.034 1.517c3.58 -1.04 6.522 -3.723 7.651 -7.742a13.84 13.84 0 0 0 .497 -3.753C20.18 7.773 21.692 5.25 22 4.009z" />
+  ),
+  instagram: (
+    <>
+      <rect x="4" y="4" width="16" height="16" rx="4" />
+      <circle cx="12" cy="12" r="3" />
+      <line x1="16.5" y1="7.5" x2="16.5" y2="7.501" />
+    </>
   ),
 };
 

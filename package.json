@@ -17,6 +17,8 @@
     "migrate2:remote": "wrangler d1 execute stickies-db --remote --file=./migrations/0002_cohort_profiles.sql",
     "migrate3:local": "wrangler d1 execute stickies-db --local --file=./migrations/0003_cohort_thumbs.sql",
     "migrate3:remote": "wrangler d1 execute stickies-db --remote --file=./migrations/0003_cohort_thumbs.sql",
+    "migrate4:local": "wrangler d1 execute stickies-db --local --file=./migrations/0004_mentor_stickies.sql",
+    "migrate4:remote": "wrangler d1 execute stickies-db --remote --file=./migrations/0004_mentor_stickies.sql",
     "seed": "tsx scripts/seed.ts",
     "seed:remote": "tsx scripts/seed.ts --remote",
     "cohort": "tsx scripts/build-cohort.ts",

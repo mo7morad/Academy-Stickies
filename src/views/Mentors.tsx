@@ -2,9 +2,8 @@ import { useEffect, useMemo, useState } from "preact/hooks";
 import type { Mentor } from "../../shared/types";
 import { getMentors } from "../api";
 import { Avatar } from "../components/Avatar";
-import { ProfileBody } from "../components/ProfileBody";
-import { Sheet } from "../components/Sheet";
 import { Spinner } from "../components/controls";
+import { navigate } from "../router";
 import { useToast } from "../toast";
 
 /**
@@ -15,7 +14,6 @@ export function Mentors() {
   const toast = useToast();
   const [mentors, setMentors] = useState<Mentor[] | null>(null);
   const [query, setQuery] = useState("");
-  const [open, setOpen] = useState<Mentor | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -40,8 +38,7 @@ export function Mentors() {
   return (
     <main class="page">
       <p class="page__lede">
-        The seniors who mentor this cohort. Tap anyone to read their profile —
-        what they teach, and the best way to reach them.
+        The seniors who mentor this cohort. Tap anyone to read their profile and leave them a sticky note.
       </p>
 
       {mentors && mentors.length > 0 && (
@@ -71,7 +68,7 @@ export function Mentors() {
             <button
               key={m.id}
               class="mentor-card"
-              onClick={() => setOpen(m)}
+              onClick={() => navigate(`/m/${m.id}`)}
               aria-label={`Read ${m.name}'s profile`}
             >
               <Avatar name={m.name} url={m.thumbUrl} size="lg" eager={i < 6} />
@@ -85,26 +82,6 @@ export function Mentors() {
         </div>
       )}
 
-      {open && (
-        <Sheet title={open.name} onClose={() => setOpen(null)}>
-          <div class="profile-head">
-            <Avatar name={open.name} url={open.photoUrl} size="xl" eager />
-            <div>
-              <div class="profile-head__name">{open.name}</div>
-              {open.role && <div class="profile-head__role">{open.role}</div>}
-              {open.nickname && (
-                <div class="profile-head__meta">Goes by {open.nickname}</div>
-              )}
-            </div>
-          </div>
-          <ProfileBody
-            intro={open.intro}
-            sections={open.sections}
-            links={open.links}
-            skills={open.skills}
-          />
-        </Sheet>
-      )}
     </main>
   );
 }

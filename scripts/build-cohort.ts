@@ -555,18 +555,18 @@ function main() {
 
   mentors.forEach((p, i) => {
     sql.push(
-      `INSERT INTO mentors (id, slug, name, nickname, role, skills, tagline, photo_key, thumb_key, intro, sections, links, sort_order, updated_at)\n` +
+      `INSERT INTO mentors (id, slug, name, nickname, role, skills, tagline, photo_key, thumb_key, intro, sections, links, sort_order, updated_at, email)\n` +
         `VALUES (${sqlQuote(randomUUID())}, ${sqlQuote(p.slug)}, ${sqlQuote(p.name)}, ` +
         `${p.nickname ? sqlQuote(p.nickname) : "NULL"}, ${p.role ? sqlQuote(p.role) : "NULL"}, ` +
         `${sqlQuote(JSON.stringify(p.skills))}, ${sqlQuote(p.tagline)}, ` +
         `${p.photoKey ? sqlQuote(p.photoKey) : "NULL"}, ` +
         `${p.thumbKey ? sqlQuote(p.thumbKey) : "NULL"}, ${sqlQuote(p.intro)}, ` +
-        `${sqlQuote(JSON.stringify(p.sections))}, ${sqlQuote(JSON.stringify(p.links))}, ${i}, ${now})\n` +
+        `${sqlQuote(JSON.stringify(p.sections))}, ${sqlQuote(JSON.stringify(p.links))}, ${i}, ${now}, ${p.email ? sqlQuote(p.email) : "NULL"})\n` +
         `ON CONFLICT(slug) DO UPDATE SET name=excluded.name, nickname=excluded.nickname, ` +
         `role=excluded.role, skills=excluded.skills, tagline=excluded.tagline, ` +
         `photo_key=excluded.photo_key, thumb_key=excluded.thumb_key, intro=excluded.intro, ` +
         `sections=excluded.sections, links=excluded.links, sort_order=excluded.sort_order, ` +
-        `updated_at=excluded.updated_at;`,
+        `updated_at=excluded.updated_at, email=excluded.email;`,
     );
   });
 

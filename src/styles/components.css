@@ -4,7 +4,7 @@
 .page {
   flex: 1;
   width: 100%;
-  max-width: 860px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: var(--s4) var(--s4) calc(var(--safe-bottom) + 128px);
 }
@@ -54,7 +54,7 @@
   display: flex;
   gap: var(--s2);
   padding: var(--s3) var(--s4);
-  max-width: 860px;
+  max-width: 1200px;
   margin: 0 auto;
 }
 .tabs__tab {
@@ -94,6 +94,18 @@
   gap: var(--s3);
   margin-bottom: var(--s4);
 }
+@media (min-width: 640px) {
+  .filters {
+    flex-direction: row;
+    align-items: center;
+  }
+  .filters .field {
+    flex: 1;
+  }
+  .filters .segmented {
+    flex-shrink: 0;
+  }
+}
 .roster-count {
   font-size: var(--t-small);
   color: var(--ink-3);
@@ -120,7 +132,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--s2);
-  max-width: 860px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 0 var(--s2);
 }
@@ -713,6 +725,43 @@
 @media (min-width: 900px) {
   .wall { columns: 3; }
 }
+.wall-layout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+}
+@media (min-width: 900px) {
+  .wall-layout {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+  .wall-main {
+    flex: 1;
+    min-width: 0;
+  }
+  .wall-sidebar {
+    width: 320px;
+    flex-shrink: 0;
+    position: sticky;
+    top: calc(var(--safe-top) + 70px);
+  }
+  .hidden-on-mobile {
+    display: block;
+  }
+  .wall-private {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  .hidden-on-desktop {
+    display: none;
+  }
+}
+@media (max-width: 899px) {
+  .hidden-on-mobile {
+    display: none;
+  }
+}
+
 .sticky {
   position: relative;
   break-inside: avoid;
