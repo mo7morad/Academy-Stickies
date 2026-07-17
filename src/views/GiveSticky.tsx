@@ -19,6 +19,7 @@ export function GiveSticky({
 }) {
   const toast = useToast();
   const [members, setMembers] = useState<RosterMember[] | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [recipientId, setRecipientId] = useState(prefillRecipientId ?? "");
   const [describedAs, setDescribedAs] = useState("");
   const [goodAt, setGoodAt] = useState("");
@@ -67,6 +68,10 @@ export function GiveSticky({
     }
   }
 
+  const filteredMembers = members?.filter((m) =>
+    m.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div>
       {/* Recipient */}
@@ -76,30 +81,47 @@ export function GiveSticky({
           <Spinner />
         </div>
       ) : (
-        <div
-          style="display:flex;gap:var(--sp-3);overflow-x:auto;padding:var(--sp-1) 2px var(--sp-4);"
-        >
-          {members.map((m) => {
-            const selected = m.id === recipientId;
-            return (
-              <button
-                key={m.id}
-                onClick={() => setRecipientId(m.id)}
-                aria-pressed={selected}
-                style={`flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:6px;width:64px;opacity:${selected ? 1 : 0.6};transition:opacity .15s;`}
-              >
-                <div
-                  style={`border-radius:50%;padding:2px;box-shadow:${selected ? "0 0 0 2px var(--tint)" : "0 0 0 2px transparent"};transition:box-shadow .15s;`}
-                >
-                  <Avatar name={m.name} url={m.avatarUrl} size="md" />
-                </div>
-                <span style="font-size:var(--text-caption);text-align:center;line-height:1.1;max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                  {m.name.split(" ")[0]}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        <>
+          <div style="padding: 0 var(--sp-1) var(--sp-2);">
+            <input
+              type="search"
+              class="field"
+              placeholder="Search members..."
+              value={searchQuery}
+              onInput={(e) => setSearchQuery((e.currentTarget as HTMLInputElement).value)}
+            />
+          </div>
+          {filteredMembers?.length === 0 ? (
+            <div style="padding: var(--sp-4); text-align: center; color: var(--ink-2); font-size: var(--t-small);">
+              No members found matching "{searchQuery}"
+            </div>
+          ) : (
+            <div
+              style="display:flex;gap:var(--sp-3);overflow-x:auto;padding:var(--sp-1) 2px var(--sp-4);"
+            >
+              {filteredMembers?.map((m) => {
+                const selected = m.id === recipientId;
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => setRecipientId(m.id)}
+                    aria-pressed={selected}
+                    style={`flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:6px;width:64px;opacity:${selected ? 1 : 0.6};transition:opacity .15s;`}
+                  >
+                    <div
+                      style={`border-radius:50%;padding:2px;box-shadow:${selected ? "0 0 0 2px var(--tint)" : "0 0 0 2px transparent"};transition:box-shadow .15s;`}
+                    >
+                      <Avatar name={m.name} url={m.avatarUrl} size="md" />
+                    </div>
+                    <span style="font-size:var(--text-caption);text-align:center;line-height:1.1;max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                      {m.name.split(" ")[0]}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
 
       {/* The note */}
