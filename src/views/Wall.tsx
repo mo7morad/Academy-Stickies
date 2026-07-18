@@ -157,7 +157,7 @@ export function Wall({
                 <Avatar
                   name={wall.member.name}
                   url={wall.member.avatarUrl}
-                  size="xxl"
+                  size={isSelf ? "xxl" : "xl"}
                   eager
                 />
                 {isSelf && (
@@ -272,9 +272,11 @@ export function Wall({
               )}
 
               <section class="wall-notes">
-                <h2 class="wall-col__title">
-                  Stickies{wall.visible && count > 0 ? ` · ${count}` : ""}
-                </h2>
+                {/* The empty and private states name themselves, so the column
+                    title only earns its place once there are notes to label. */}
+                {wall.visible && count > 0 && (
+                  <h2 class="wall-col__title">Stickies · {count}</h2>
+                )}
 
                 {!wall.visible ? (
                   <div class="empty">

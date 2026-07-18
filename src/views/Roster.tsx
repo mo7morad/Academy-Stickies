@@ -10,9 +10,9 @@ import { useToast } from "../toast";
 type SessionFilter = "all" | "AM" | "PM";
 
 /**
- * Rendered above and below the grid — 48 rows is far enough to scroll that
- * paging from the bottom shouldn't mean scrolling back up. The range count in
- * .roster-bar is the one live region, so neither copy announces.
+ * Rendered above and below the grid so paging from the bottom of a long page
+ * doesn't mean scrolling back up. The range count in .roster-bar is the one
+ * live region, so neither copy announces.
  */
 function Pager({
   page,
@@ -59,9 +59,7 @@ export function Roster({
   const [query, setQuery] = useState("");
   const [session, setSession] = useState<SessionFilter>("all");
   const [page, setPage] = useState(1);
-  // Rows are far denser than the old photo cards, so a page holds more of the
-  // cohort without becoming a wall of faces.
-  const PAGE_SIZE = 48;
+  const PAGE_SIZE = 24;
 
   useEffect(() => {
     let alive = true;
@@ -164,60 +162,33 @@ export function Roster({
           </div>
           <div class="roster">
             {visibleMembers?.map((m, i) => {
-              // A "0" on all 209 cards is noise — the count earns its place
-              // once there is one. The globe stands alone on an empty public
-              // wall, since it says something the count cannot.
+              // A "0" on every card is noise — the count earns its place once
+              // there's one. The globe stands alone on an empty public wall,
+              // since it says something the count cannot.
               const showsGlobe = m.wallPublic && !m.isSelf;
               const showsNotes = m.receivedCount > 0;
               return (
                 <a
                   key={m.id}
-                  class={`member-row ${m.isSelf ? "member-row--self" : ""}`}
+                  class={`member-card ${m.isSelf ? "member-card--self" : ""}`}
                   href={m.isSelf ? "#/me" : `#/m/${m.id}`}
+                  title={m.tagline ? stripTags(m.tagline) : undefined}
                 >
-                  <Avatar name={m.name} url={m.thumbUrl} size="md" eager={i < 12} />
-                  <div class="member-row__text">
-                    <div class="member-row__name">{m.isSelf ? "You" : m.name}</div>
-                    <div class="member-row__sub">
-                      {m.tagline ? (
-                        <span class="member-row__tagline">
-                          {stripTags(m.tagline)}
-                        </span>
-                      ) : (
-                        <span class="member-row__tagline member-row__tagline--none">
-                          No tagline yet
-                        </span>
-                      )}
-                      {/* The icons are decorative, so this carries its own
-                          label for screen readers. */}
-                      {(showsNotes || showsGlobe) && (
-                        <span
-                          class="member-row__notes"
-                          aria-label={[
-                            showsGlobe && "Wall visible to the academy",
-                            showsNotes &&
-                              `${m.receivedCount} note${m.receivedCount === 1 ? "" : "s"}`,
-                          ]
-                            .filter(Boolean)
-                            .join(", ")}
-                        >
-                          {showsGlobe && <Icon name="globe" size={11} />}
-                          {showsNotes && (
-                            <>
-                              <Icon name="note" size={11} />
-                              {m.receivedCount}
-                            </>
-                          )}
+                  <Avatar name={m.name} url={m.thumbUrl} size="lg" eager={i < 8} />
+                  <div class="member-card__name">{m.isSelf ? "You" : m.name}</div>
+                  {(m.isSelf || showsGlobe || showsNotes) && (
+                    <div class="member-card__meta">
+                      {m.isSelf && <span class="badge-you">Your wall</span>}
+                      {showsGlobe && <Icon name="globe" size={12} />}
+                      {showsNotes && (
+                        <span>
+                          {m.receivedCount} note{m.receivedCount === 1 ? "" : "s"}
                         </span>
                       )}
                     </div>
-                  </div>
-                  {m.isSelf ? (
-                    <span class="badge-you">You</span>
-                  ) : (
-                    m.session && (
-                      <span class="member-row__session">{m.session}</span>
-                    )
+                  )}
+                  {m.session && (
+                    <span class="member-card__session">{m.session}</span>
                   )}
                 </a>
               );

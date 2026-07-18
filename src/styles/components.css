@@ -552,97 +552,81 @@
 /* ===========================================================================
    Roster (Main Directory)
 
-   200+ people, so the default is a compact row: one line of name, one of
-   context. auto-fill lets wide desktops add columns instead of growing
-   gutters — the grid fills the screen it is given.
+   A wall of paper cards: each a photo, a name, and a pencilled-in session in
+   the corner. They recede at rest and jiggle on hover — the pin-board feel the
+   whole app is built around. Two up on a phone, up to five on a wide desktop.
 =========================================================================== */
 .roster {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--s2);
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--s3);
   padding-top: var(--s1);
 }
-@media (min-width: 640px) {
-  .roster {
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: var(--s2) var(--s3);
-  }
+@media (min-width: 500px) {
+  .roster { grid-template-columns: repeat(3, 1fr); }
 }
-
-.member-row {
+@media (min-width: 768px) {
+  .roster { grid-template-columns: repeat(4, 1fr); }
+}
+@media (min-width: 1024px) {
+  .roster { grid-template-columns: repeat(5, 1fr); }
+}
+.member-card {
+  position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: var(--s3);
-  min-width: 0;
-  padding: var(--s2) var(--s3);
+  gap: var(--s2);
+  padding: var(--s5) var(--s2);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--r-wobbly-sm);
+  border-radius: var(--r-wobbly-2);
   box-shadow: var(--shadow-sm);
   color: var(--ink);
   text-decoration: none;
-  transition: transform 160ms var(--ease-out), box-shadow 160ms var(--ease-out),
-    background 160ms var(--ease-out);
+  text-align: center;
+  transition: transform 180ms var(--ease-out), box-shadow 180ms var(--ease-out),
+    border-color 180ms var(--ease-out);
+  animation: pop-in 320ms var(--ease-out) both;
 }
-.member-row:active {
+.member-card:active {
   transform: translate(2px, 2px);
   box-shadow: none;
 }
-@media (hover: hover) and (pointer: fine) {
-  .member-row:hover {
-    background: var(--brand-soft);
-    transform: translate(-2px, -2px);
-    box-shadow: var(--shadow-md);
-  }
-}
-.member-row--self {
+.member-card--self {
   border-color: var(--brand);
   background: var(--brand-soft);
-  box-shadow: 3px 3px 0 0 var(--brand);
+  transform: rotate(-1.5deg);
+  box-shadow: 4px 4px 0px 0px var(--brand);
 }
-/* The text column must be allowed to shrink, or long names and taglines
-   blow the grid track out instead of ellipsing. */
-.member-row__text {
-  flex: 1;
-  min-width: 0;
+@media (hover: hover) and (pointer: fine) {
+  .member-card:hover {
+    transform: rotate(-2deg);
+    box-shadow: var(--shadow-md);
+  }
+  .member-card--self:hover {
+    transform: rotate(0deg) translate(-2px, -2px);
+    box-shadow: 6px 6px 0px 0px var(--brand);
+  }
 }
-.member-row__name {
-  font-weight: 700;
+.member-card__name {
   font-size: var(--t-sub);
-  line-height: 1.25;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-weight: 700;
+  line-height: 1.2;
 }
-.member-row__sub {
-  display: flex;
-  align-items: center;
-  gap: var(--s2);
+.member-card__meta {
   font-size: var(--t-tiny);
-  color: var(--ink-3);
-  line-height: 1.3;
-}
-.member-row__tagline {
-  flex: 1;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.member-row__tagline--none {
-  opacity: 0.55;
-  font-style: italic;
-}
-.member-row__notes {
-  flex-shrink: 0;
+  color: var(--ink-2);
+  font-weight: 500;
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  font-weight: 700;
-  color: var(--ink-2);
+  gap: 4px;
 }
-.member-row__session {
-  flex-shrink: 0;
+/* AM/PM session, pinned to the card corner like a pencilled-in note. */
+.member-card__session {
+  position: absolute;
+  top: 6px;
+  right: 8px;
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.04em;
