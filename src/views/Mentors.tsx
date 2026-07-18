@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "preact/hooks";
+import { stripTags } from "../../shared/text";
 import type { Mentor } from "../../shared/types";
 import { getMentors } from "../api";
 import { Avatar } from "../components/Avatar";
@@ -75,7 +76,9 @@ export function Mentors() {
               <div class="mentor-card__text">
                 <div class="mentor-card__name">{m.name}</div>
                 {m.role && <div class="mentor-card__role">{m.role}</div>}
-                {m.tagline && <p class="mentor-card__tagline">{m.tagline}</p>}
+                {m.tagline && (
+                  <p class="mentor-card__tagline">{stripTags(m.tagline)}</p>
+                )}
               </div>
             </button>
           ))}

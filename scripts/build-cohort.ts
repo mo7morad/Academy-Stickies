@@ -23,6 +23,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, join } from "node:path";
+import { loose, normalizeProse, stripTags, toTagline } from "../shared/text";
 import { d1ExecFile, isRemote, sqlQuote } from "./util";
 
 const COHORT_DIR = "Cohort";
@@ -78,9 +79,13 @@ interface Person {
 const EMOJI =
   /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}\u{1F1E6}-\u{1F1FF}\u{FE00}-\u{FE0F}\u{200D}]/gu;
 
-/** Strip emoji + Markdown emphasis from a heading so variants collapse together. */
+/**
+ * Strip tags, emoji and Markdown emphasis from a heading so variants collapse
+ * together. Titles never pass through tidyBody, so without stripTags they kept
+ * whatever the author typed — sections rendered as "My Strengths<br/>".
+ */
 function cleanHeading(raw: string): string {
-  return raw
+  return stripTags(raw)
     .replace(EMOJI, "")
     .replace(/==/g, "")
     .replace(/[*_~`]/g, "")
@@ -88,11 +93,6 @@ function cleanHeading(raw: string): string {
     .trim()
     .replace(/[:?.]+$/, "")
     .trim();
-}
-
-/** Loose identity for comparing a heading against a person's name. */
-function loose(s: string): string {
-  return s.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 /** Heading variants seen across both cohorts -> one label we actually render. */
@@ -133,6 +133,47 @@ const CANONICAL: Record<string, string> = {
   highlight: "Highlight",
 };
 
+/** Zero-width characters ride along in Docs exports and break every match. */
+const ZERO_WIDTH = /[​-‍﻿]/g;
+
+/**
+ * Three profiles were pasted out of a Google Docs export, which dumps the
+ * editor's own sidebar into the file: app chrome, a read time, the document
+ * outline, then the title again. All of it lands in the intro and becomes the
+ * tagline — "Document meeting options View Docs activity center More options".
+ *
+ * Every line of that dump is a fragment, so the cut runs to the first line of
+ * real prose. The marker gates it to the files that carry the dump; the other
+ * 204 are hand-written and must not be touched by this.
+ */
+const DOC_EXPORT = /^(add page|copy doc link)\s*$/im;
+
+function isProse(line: string): boolean {
+  return line.trim().split(/\s+/).filter(Boolean).length >= 8;
+}
+
+function dropDocExportHead(md: string): string {
+  if (!DOC_EXPORT.test(md)) return md;
+  const lines = md.split("\n");
+  const start = lines.findIndex(isProse);
+  return start < 0 ? md : lines.slice(start).join("\n");
+}
+
+/**
+ * Exports also repeat the page title — the member's own name — as the first
+ * line of the body, where it lands in the intro and then the tagline: cards
+ * read "Abuidillah Adjie Muliadi Hi, Abui here!".
+ */
+function dropRepeatedName(lines: string[], name: string): string[] {
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i].trim();
+    if (line && loose(line) !== loose(name)) break;
+    i++;
+  }
+  return lines.slice(i);
+}
+
 /** Details-table keys that map onto structured fields rather than prose. */
 const META_KEYS = ["name", "nickname", "role", "skills"];
 
@@ -157,27 +198,14 @@ function titleCase(s: string): string {
 }
 
 function tidyBody(raw: string): string {
-  return raw
-    .split("\n")
-    .filter((l) => !/^\s*[-*_]{3,}\s*$/.test(l)) // horizontal rules
-    .join("\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-}
-
-/** A short, card-sized line: first sentence, never mid-word. */
-function toTagline(text: string, max = 120): string {
-  const flat = text
-    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
-    .replace(/[*_~`#>]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-  if (!flat) return "";
-  const sentence = flat.split(/(?<=[.!?])\s/)[0] ?? flat;
-  const pick = sentence.length <= max ? sentence : flat;
-  if (pick.length <= max) return pick.trim();
-  return pick.slice(0, max).replace(/\s+\S*$/, "").trim() + "…";
+  return normalizeProse(
+    raw
+      .split("\n")
+      .filter((l) => !/^\s*[-*_]{3,}\s*$/.test(l)) // horizontal rules
+      .join("\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim(),
+  );
 }
 
 function extractLinks(body: string): Link[] {
@@ -293,7 +321,10 @@ function parseProfile(
   tableName: string | null;
 } {
   // Drop embedded photos — we serve optimized copies from R2 instead.
-  const cleaned = md.replace(/!\[[^\]]*\]\([^)]*\)/g, "");
+  const cleaned = dropDocExportHead(md.replace(ZERO_WIDTH, "")).replace(
+    /!\[[^\]]*\]\([^)]*\)/g,
+    "",
+  );
   const { meta, rest } = takeTable(cleaned.split("\n"));
 
   const preamble: string[] = [];
@@ -311,13 +342,15 @@ function parseProfile(
   }
   if (current) sections.push({ title: current.title, body: tidyBody(current.body.join("\n")) });
 
-  let intro = tidyBody(preamble.join("\n"));
+  let intro = tidyBody(dropRepeatedName(preamble, name).join("\n"));
 
   // Learner files open with `# Their Name` — that's a title, not a section, so
-  // fold its prose into the intro.
+  // fold its prose into the intro. The repeated title usually sits under that
+  // heading rather than above it, so it arrives here, not in the preamble.
   if (sections.length && loose(cleanHeading(sections[0].title)) === loose(name)) {
     const first = sections.shift()!;
-    intro = tidyBody([intro, first.body].filter(Boolean).join("\n\n"));
+    const body = dropRepeatedName(first.body.split("\n"), name).join("\n");
+    intro = tidyBody([intro, body].filter(Boolean).join("\n\n"));
   }
 
   // Contact sections become link chips rather than a wall of URLs.

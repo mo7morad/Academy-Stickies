@@ -4,9 +4,16 @@
 .page {
   flex: 1;
   width: 100%;
-  max-width: 1200px;
+  max-width: var(--page-max);
   margin: 0 auto;
-  padding: var(--s4) var(--s4) calc(var(--safe-bottom) + 128px);
+  /* The footer below carries the clearance for the floating FAB. */
+  padding: var(--s4) var(--s4) var(--s6);
+}
+@media (min-width: 1024px) {
+  .page {
+    padding-left: var(--s6);
+    padding-right: var(--s6);
+  }
 }
 .center-screen {
   flex: 1;
@@ -35,6 +42,69 @@
 }
 
 /* ===========================================================================
+   Pagination
+=========================================================================== */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s3);
+  margin: var(--s5) 0 var(--s4);
+}
+.pagination__status {
+  font-size: var(--t-small);
+  font-weight: 600;
+  color: var(--ink-2);
+  /* Page counts change width as you move through the roster; a fixed floor
+     stops the two buttons from twitching sideways on every click. */
+  min-width: 9ch;
+  text-align: center;
+}
+
+/* ===========================================================================
+   App footer — the credits, torn off the bottom of the page like a note.
+=========================================================================== */
+.app-footer {
+  width: 100%;
+  max-width: var(--page-max);
+  margin: 0 auto;
+  /* Clears the FAB, which floats bottom-right above this. */
+  padding: var(--s5) var(--s4) calc(var(--safe-bottom) + 96px);
+  border-top: 2px dashed var(--ink-muted);
+  text-align: center;
+}
+.app-footer__made {
+  font-size: var(--t-sub);
+  color: var(--ink-2);
+}
+.app-footer__heart {
+  color: var(--brand);
+}
+.app-footer__tag {
+  margin-top: var(--s1);
+  font-size: var(--t-tiny);
+  color: var(--ink-3);
+}
+/* Underlined by hand — a pencil stroke that thickens on hover. */
+.app-footer__person {
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: none;
+  border-bottom: 2px solid var(--brand-soft);
+  transition: border-color 160ms var(--ease-out), color 160ms var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .app-footer__person:hover {
+    color: var(--brand);
+    border-bottom-color: var(--brand);
+  }
+}
+.app-footer__person--flat {
+  border-bottom-color: transparent;
+  font-weight: 600;
+}
+
+/* ===========================================================================
    Directory tabs
 =========================================================================== */
 /* Full-bleed bar so the blur reaches the viewport edges; the links stay
@@ -45,7 +115,9 @@
   /* safe area + the navbar's 48px row + its 3px rule */
   top: calc(var(--safe-top) + 51px);
   z-index: 35;
-  background: var(--bar);
+  /* Denser than --bar: at 0.85 the prose scrolling underneath showed through
+     enough to read as clipped text rather than as content passing behind. */
+  background: color-mix(in srgb, var(--canvas) 94%, transparent);
   -webkit-backdrop-filter: saturate(180%) blur(18px);
   backdrop-filter: saturate(180%) blur(18px);
   border-bottom: 1px solid var(--border);
@@ -99,18 +171,33 @@
     flex-direction: row;
     align-items: center;
   }
+  /* Capped rather than flexed: stretched to the full 1440px column, the search
+     field reads as an empty panel instead of an input. */
   .filters .field {
     flex: 1;
+    max-width: 420px;
   }
   .filters .segmented {
     flex-shrink: 0;
+    margin-left: auto;
   }
+}
+/* The range and the pager describe the same thing, so they share a line. */
+.roster-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  flex-wrap: wrap;
+  padding: 0 var(--s1) var(--s2);
+}
+.roster-bar .pagination {
+  margin: 0;
 }
 .roster-count {
   font-size: var(--t-small);
   color: var(--ink-3);
   font-weight: 600;
-  padding: 0 var(--s1) var(--s2);
 }
 
 /* ===========================================================================
@@ -132,7 +219,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--s2);
-  max-width: 1200px;
+  max-width: var(--page-max);
   margin: 0 auto;
   padding: 0 var(--s2);
 }
@@ -464,71 +551,104 @@
 
 /* ===========================================================================
    Roster (Main Directory)
+
+   200+ people, so the default is a compact row: one line of name, one of
+   context. auto-fill lets wide desktops add columns instead of growing
+   gutters — the grid fills the screen it is given.
 =========================================================================== */
 .roster {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--s3);
+  grid-template-columns: 1fr;
+  gap: var(--s2);
   padding-top: var(--s1);
 }
-@media (min-width: 500px) {
-  .roster { grid-template-columns: repeat(3, 1fr); }
+@media (min-width: 640px) {
+  .roster {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--s2) var(--s3);
+  }
 }
-@media (min-width: 768px) {
-  .roster { grid-template-columns: repeat(4, 1fr); }
-}
-@media (min-width: 1024px) {
-  .roster { grid-template-columns: repeat(5, 1fr); }
-}
-.member-card {
-  position: relative;
+
+.member-row {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: var(--s2);
-  padding: var(--s5) var(--s2);
+  gap: var(--s3);
+  min-width: 0;
+  padding: var(--s2) var(--s3);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--r-wobbly-2);
+  border-radius: var(--r-wobbly-sm);
   box-shadow: var(--shadow-sm);
-  text-align: center;
-  transition: transform 180ms var(--ease-out), box-shadow 180ms var(--ease-out),
-    border-color 180ms var(--ease-out);
-  animation: pop-in 320ms var(--ease-out) both;
+  color: var(--ink);
+  text-decoration: none;
+  transition: transform 160ms var(--ease-out), box-shadow 160ms var(--ease-out),
+    background 160ms var(--ease-out);
 }
-.member-card:active {
+.member-row:active {
   transform: translate(2px, 2px);
   box-shadow: none;
 }
-.member-card--self {
-  border-color: var(--brand);
-  background: var(--brand-soft);
-  transform: rotate(-1.5deg);
-  box-shadow: 4px 4px 0px 0px var(--brand);
-}
 @media (hover: hover) and (pointer: fine) {
-  .member-card:hover {
-    transform: rotate(-2deg);
+  .member-row:hover {
+    background: var(--brand-soft);
+    transform: translate(-2px, -2px);
     box-shadow: var(--shadow-md);
   }
-  .member-card--self:hover {
-    transform: rotate(0deg) translate(-2px, -2px);
-    box-shadow: 6px 6px 0px 0px var(--brand);
-  }
 }
-.member-card__name {
-  font-size: var(--t-sub);
+.member-row--self {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  box-shadow: 3px 3px 0 0 var(--brand);
+}
+/* The text column must be allowed to shrink, or long names and taglines
+   blow the grid track out instead of ellipsing. */
+.member-row__text {
+  flex: 1;
+  min-width: 0;
+}
+.member-row__name {
   font-weight: 700;
-  line-height: 1.2;
+  font-size: var(--t-sub);
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.member-card__meta {
+.member-row__sub {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
   font-size: var(--t-tiny);
-  color: var(--ink-2);
-  font-weight: 500;
+  color: var(--ink-3);
+  line-height: 1.3;
+}
+.member-row__tagline {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.member-row__tagline--none {
+  opacity: 0.55;
+  font-style: italic;
+}
+.member-row__notes {
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
+  font-weight: 700;
+  color: var(--ink-2);
 }
+.member-row__session {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+}
+
 .badge-you {
   font-size: 10px;
   font-weight: 800;
@@ -539,17 +659,6 @@
   padding: 3px 8px;
   border-radius: var(--r-pill);
 }
-/* AM/PM session, pinned to the card corner like a pencilled-in note. */
-.member-card__session {
-  position: absolute;
-  top: 6px;
-  right: 8px;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  color: var(--ink-3);
-}
-
 /* ===========================================================================
    Mentors
 =========================================================================== */
@@ -728,39 +837,12 @@
   column-gap: var(--s4);
   padding-top: var(--s3);
 }
-@media (min-width: 620px) {
+/* Two, at every width that fits them. Above 1024px the notes sit in the right
+   half of .wall-body, which is ~810px at --page-max — still two. */
+@media (min-width: 640px) {
   .wall { columns: 2; }
 }
 @media (min-width: 900px) {
-  .wall { columns: 3; }
-}
-.wall-layout {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s4);
-}
-@media (min-width: 900px) {
-  .wall-layout {
-    flex-direction: row;
-    align-items: flex-start;
-  }
-  .wall-main {
-    flex: 1;
-    min-width: 0;
-  }
-  .wall-sidebar {
-    width: 320px;
-    flex-shrink: 0;
-    position: sticky;
-    top: calc(var(--safe-top) + 70px);
-  }
-  .hidden-on-mobile {
-    display: block;
-  }
-  .wall-private {
-    max-width: 600px;
-    margin: 0 auto;
-  }
   .hidden-on-desktop {
     display: none;
   }
@@ -1064,24 +1146,39 @@
 }
 
 /* ===========================================================================
-   Wall header
+   Wall hero — one identity band across the top of a profile.
+
+   Rendered once for every width and every viewer. It used to be three copies
+   of the same markup swapped by .hidden-on-*, which is how the profile ended
+   up reading inside a 320px rail on a 1440px screen.
 =========================================================================== */
-.wall-head {
+.wall-hero {
   display: flex;
   align-items: flex-start;
   gap: var(--s4);
-  margin: var(--s2) 0 var(--s5);
+  padding-bottom: var(--s5);
+  margin-bottom: var(--s5);
+  border-bottom: 3px dashed var(--ink-muted);
 }
-.wall-head--self {
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
+/* Your own wall leads with your photo, centred — as it always has on phones.
+   Everyone else's stays a compact row so their notes keep the fold. */
+@media (max-width: 899px) {
+  .wall-hero--self {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
 }
-.wall-head__avatar {
+@media (min-width: 900px) {
+  .wall-hero {
+    gap: var(--s6);
+  }
+}
+.wall-hero__avatar {
   position: relative;
   flex-shrink: 0;
 }
-.wall-head__camera {
+.wall-hero__camera {
   position: absolute;
   right: -4px;
   bottom: -4px;
@@ -1090,39 +1187,108 @@
   border: 2px solid var(--border);
   box-shadow: var(--shadow-sm);
 }
-.wall-head__text {
+.wall-hero__text {
   flex: 1;
   min-width: 0;
 }
-.wall-head__name {
+.wall-hero__name {
   font-family: var(--font-heading);
   font-size: var(--t-title);
   font-weight: 700;
   line-height: 1.15;
 }
-.wall-head__meta {
+@media (min-width: 900px) {
+  .wall-hero__name {
+    font-size: var(--t-display);
+  }
+}
+.wall-hero__meta,
+.wall-hero__links,
+.wall-hero__actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--s2);
-  margin-top: var(--s2);
+  margin-top: var(--s3);
 }
-.wall-head--self .wall-head__meta {
-  justify-content: center;
+@media (max-width: 899px) {
+  .wall-hero--self .wall-hero__meta,
+  .wall-hero--self .wall-hero__links,
+  .wall-hero--self .wall-hero__actions {
+    justify-content: center;
+  }
 }
-.wall-head__tagline {
+.wall-hero__tagline {
   margin-top: var(--s3);
   color: var(--ink-2);
+  font-size: var(--t-body);
+  line-height: 1.45;
+  /* Their own sentence, at a length the eye can take in one go. */
+  max-width: 54ch;
+}
+@media (max-width: 899px) {
+  .wall-hero--self .wall-hero__tagline {
+    margin-inline: auto;
+  }
+}
+/* The tagline is built from the first sentence of the intro, so as soon as the
+   Profile column is on screen the hero is saying it twice. Phones keep it —
+   their profile is behind a sheet. */
+@media (min-width: 900px) {
+  .wall-hero--with-about .wall-hero__tagline {
+    display: none;
+  }
+}
+
+/* ===========================================================================
+   Wall body — the profile and the notes, side by side.
+=========================================================================== */
+.wall-body {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--s5);
+}
+@media (min-width: 1024px) {
+  .wall-body {
+    /* The prose is the slower read, the notes are the denser one. */
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: var(--s8);
+    align-items: start;
+  }
+  .wall-notes {
+    border-left: 2px dashed var(--ink-muted);
+    padding-left: var(--s8);
+  }
+}
+/* One column, centred: what a private or empty wall used to get from
+   .wall-private, kept now that both walls share a single layout. The notice
+   leads, because it answers the question the reader arrived with. */
+.wall-body--single {
+  max-width: 760px;
+  margin: 0 auto;
+}
+.wall-body--single .wall-notes {
+  order: -1;
+}
+@media (min-width: 1024px) {
+  .wall-body--single {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .wall-body--single .wall-notes {
+    border-left: 0;
+    padding-left: 0;
+  }
+}
+.wall-about .prose {
+  max-width: 62ch;
+}
+.wall-col__title {
+  font-family: var(--font-heading);
   font-size: var(--t-sub);
-  line-height: 1.4;
-}
-.wall-head__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s2);
-  margin-top: var(--s4);
-}
-.wall-head--self .wall-head__actions {
-  justify-content: center;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--brand);
+  margin-bottom: var(--s3);
 }
 
 /* ===========================================================================
@@ -1277,14 +1443,14 @@
 }
 
 /* Gentle stagger for boards (decorative; capped) */
-.member-card:nth-child(1),  .sticky:nth-child(1)  { animation-delay: 0ms; }
-.member-card:nth-child(2),  .sticky:nth-child(2)  { animation-delay: 40ms; }
-.member-card:nth-child(3),  .sticky:nth-child(3)  { animation-delay: 80ms; }
-.member-card:nth-child(4),  .sticky:nth-child(4)  { animation-delay: 120ms; }
-.member-card:nth-child(5),  .sticky:nth-child(5)  { animation-delay: 160ms; }
-.member-card:nth-child(6),  .sticky:nth-child(6)  { animation-delay: 200ms; }
-.member-card:nth-child(n+7), .sticky:nth-child(n+7) { animation-delay: 240ms; }
+.sticky:nth-child(1)  { animation-delay: 0ms; }
+.sticky:nth-child(2)  { animation-delay: 40ms; }
+.sticky:nth-child(3)  { animation-delay: 80ms; }
+.sticky:nth-child(4)  { animation-delay: 120ms; }
+.sticky:nth-child(5)  { animation-delay: 160ms; }
+.sticky:nth-child(6)  { animation-delay: 200ms; }
+.sticky:nth-child(n+7) { animation-delay: 240ms; }
 
 @media (prefers-reduced-motion: reduce) {
-  .member-card, .sticky { animation: none; }
+  .sticky { animation: none; }
 }

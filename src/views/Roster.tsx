@@ -1,13 +1,51 @@
 import { useEffect, useMemo, useState } from "preact/hooks";
+import { stripTags } from "../../shared/text";
 import type { RosterMember } from "../../shared/types";
 import { getMembers } from "../api";
 import { Avatar } from "../components/Avatar";
 import { Segmented, Spinner } from "../components/controls";
 import { Icon } from "../components/Icon";
-import { navigate } from "../router";
 import { useToast } from "../toast";
 
 type SessionFilter = "all" | "AM" | "PM";
+
+/**
+ * Rendered above and below the grid — 48 rows is far enough to scroll that
+ * paging from the bottom shouldn't mean scrolling back up. The range count in
+ * .roster-bar is the one live region, so neither copy announces.
+ */
+function Pager({
+  page,
+  totalPages,
+  onPage,
+}: {
+  page: number;
+  totalPages: number;
+  onPage: (page: number) => void;
+}) {
+  if (totalPages <= 1) return null;
+  return (
+    <nav class="pagination" aria-label="Roster pages">
+      <button
+        class="btn btn--tinted"
+        disabled={page === 1}
+        onClick={() => onPage(Math.max(1, page - 1))}
+      >
+        &larr; Prev
+      </button>
+      <span class="pagination__status">
+        Page {page} of {totalPages}
+      </span>
+      <button
+        class="btn btn--tinted"
+        disabled={page === totalPages}
+        onClick={() => onPage(Math.min(totalPages, page + 1))}
+      >
+        Next &rarr;
+      </button>
+    </nav>
+  );
+}
 
 export function Roster({
   refreshSignal,
@@ -21,7 +59,9 @@ export function Roster({
   const [query, setQuery] = useState("");
   const [session, setSession] = useState<SessionFilter>("all");
   const [page, setPage] = useState(1);
-  const PAGE_SIZE = 24;
+  // Rows are far denser than the old photo cards, so a page holds more of the
+  // cohort without becoming a wall of faces.
+  const PAGE_SIZE = 48;
 
   useEffect(() => {
     let alive = true;
@@ -66,6 +106,9 @@ export function Roster({
     if (!filtered) return null;
     return filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   }, [filtered, page]);
+
+  const rangeStart = (page - 1) * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(page * PAGE_SIZE, filtered?.length ?? 0);
 
   return (
     <main class="page">
@@ -112,51 +155,75 @@ export function Roster({
         </div>
       ) : (
         <>
-          <div class="roster-count">
-            {filtered?.length} {filtered?.length === 1 ? "person" : "people"}
+          <div class="roster-bar">
+            <div class="roster-count" aria-live="polite">
+              {rangeStart}–{rangeEnd} of {filtered?.length}{" "}
+              {filtered?.length === 1 ? "person" : "people"}
+            </div>
+            <Pager page={page} totalPages={totalPages} onPage={setPage} />
           </div>
           <div class="roster">
-            {visibleMembers?.map((m, i) => (
-              <button
-                key={m.id}
-                class={`member-card ${m.isSelf ? "member-card--self" : ""}`}
-                onClick={() => navigate(m.isSelf ? "/me" : `/m/${m.id}`)}
-                title={m.tagline ?? undefined}
-              >
-                <Avatar name={m.name} url={m.thumbUrl} size="lg" eager={i < 8} />
-                <div class="member-card__name">{m.isSelf ? "You" : m.name}</div>
-                <div class="member-card__meta">
-                  {m.isSelf && <span class="badge-you">Your wall</span>}
-                  {!m.isSelf && m.wallPublic && <Icon name="globe" size={12} />}
-                  <span>
-                    {m.receivedCount} note{m.receivedCount === 1 ? "" : "s"}
-                  </span>
-                </div>
-                {m.session && <span class="member-card__session">{m.session}</span>}
-              </button>
-            ))}
+            {visibleMembers?.map((m, i) => {
+              // A "0" on all 209 cards is noise — the count earns its place
+              // once there is one. The globe stands alone on an empty public
+              // wall, since it says something the count cannot.
+              const showsGlobe = m.wallPublic && !m.isSelf;
+              const showsNotes = m.receivedCount > 0;
+              return (
+                <a
+                  key={m.id}
+                  class={`member-row ${m.isSelf ? "member-row--self" : ""}`}
+                  href={m.isSelf ? "#/me" : `#/m/${m.id}`}
+                >
+                  <Avatar name={m.name} url={m.thumbUrl} size="md" eager={i < 12} />
+                  <div class="member-row__text">
+                    <div class="member-row__name">{m.isSelf ? "You" : m.name}</div>
+                    <div class="member-row__sub">
+                      {m.tagline ? (
+                        <span class="member-row__tagline">
+                          {stripTags(m.tagline)}
+                        </span>
+                      ) : (
+                        <span class="member-row__tagline member-row__tagline--none">
+                          No tagline yet
+                        </span>
+                      )}
+                      {/* The icons are decorative, so this carries its own
+                          label for screen readers. */}
+                      {(showsNotes || showsGlobe) && (
+                        <span
+                          class="member-row__notes"
+                          aria-label={[
+                            showsGlobe && "Wall visible to the academy",
+                            showsNotes &&
+                              `${m.receivedCount} note${m.receivedCount === 1 ? "" : "s"}`,
+                          ]
+                            .filter(Boolean)
+                            .join(", ")}
+                        >
+                          {showsGlobe && <Icon name="globe" size={11} />}
+                          {showsNotes && (
+                            <>
+                              <Icon name="note" size={11} />
+                              {m.receivedCount}
+                            </>
+                          )}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {m.isSelf ? (
+                    <span class="badge-you">You</span>
+                  ) : (
+                    m.session && (
+                      <span class="member-row__session">{m.session}</span>
+                    )
+                  )}
+                </a>
+              );
+            })}
           </div>
-          {totalPages > 1 && (
-            <div class="pagination" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "var(--s3)", marginTop: "var(--s5)", marginBottom: "var(--s4)" }}>
-              <button 
-                class="btn btn--tinted" 
-                disabled={page === 1} 
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-              >
-                &larr; Prev
-              </button>
-              <span style={{ fontSize: "var(--t-small)", fontWeight: 600, color: "var(--ink-2)" }}>
-                Page {page} of {totalPages}
-              </span>
-              <button 
-                class="btn btn--tinted" 
-                disabled={page === totalPages} 
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-              >
-                Next &rarr;
-              </button>
-            </div>
-          )}
+          <Pager page={page} totalPages={totalPages} onPage={setPage} />
         </>
       )}
 

@@ -1,23 +1,23 @@
 /* Design tokens — Hand-Drawn System */
 
 :root {
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro", "Segoe UI", Roboto, sans-serif;
-  --font-heading: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+  --font-sans: "Patrick Hand", "Kalam", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-heading: "Kalam", "Patrick Hand", -apple-system, BlinkMacSystemFont, sans-serif;
 
   /* Type scale */
   --t-display: 40px;
   --t-title: 28px;
   --t-heading: 22px;
-  --t-body: 16px;
-  --t-sub: 14px;
-  --t-small: 13px;
-  --t-tiny: 11px;
+  --t-body: 18px;
+  --t-sub: 16px;
+  --t-small: 14px;
+  --t-tiny: 12px;
 
-  /* Radii - Clean Apple Style */
-  --r-wobbly-1: 16px;
-  --r-wobbly-2: 12px;
-  --r-wobbly-sm: 8px;
-  --r-pill: 999px;
+  /* Radii - Wobbly (No straight lines) */
+  --r-wobbly-1: 255px 15px 225px 15px / 15px 225px 15px 255px;
+  --r-wobbly-2: 15px 225px 15px 255px / 255px 15px 225px 15px;
+  --r-wobbly-sm: 8px 3px 6px 4px / 4px 6px 3px 8px;
+  --r-pill: 999px; /* Can still use pill for tiny badges if needed */
 
   /* Plain radii — for surfaces where a wobble would read as a rendering bug
      (sheets, thumbnails, media). Referenced widely; previously undefined,
@@ -31,6 +31,10 @@
   --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
   --s5: 20px; --s6: 24px; --s8: 32px; --s10: 40px;
 
+  /* The page column. Wide enough that large desktops fill with content
+     rather than gutters; capped so prose never runs to an unreadable line. */
+  --page-max: 1440px;
+
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 
@@ -39,22 +43,25 @@
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 
-  /* Standard Colors */
-  --canvas: #f5f5f7;      /* Apple Gray Background */
-  --ink: #1d1d1f;         /* Apple Dark Gray Text */
-  --ink-2: #86868b;       
-  --ink-3: #a1a1a6; 
-  --ink-muted: #d2d2d7;   
+  /* Hand-Drawn Colors */
+  --canvas: #fdfbf7;      /* Warm Paper */
+  --ink: #2d2d2d;         /* Soft Pencil Black */
+  --ink-2: #2d2d2d;       
+  --ink-3: rgba(45, 45, 45, 0.6); 
+  --ink-muted: #e5e0d8;   /* Old Paper / Erased Pencil */
   
-  --brand: #007aff;
-  --brand-ink: #ffffff;
-  --brand-soft: rgba(0, 122, 255, 0.12);
+  /* Red Correction Marker. Darkened from #ff4d4d: paired with --brand-ink it
+     only reached 2.68:1, so the FAB and active tab failed WCAG AA. This is
+     4.8:1 and still reads as the same marker red. */
+  --brand: #d32f2f;
+  --brand-ink: #fdfbf7;
+  --brand-soft: rgba(211, 47, 47, 0.12);
   
-  --secondary: #007aff;
-  --secondary-ink: #ffffff;
+  --secondary: #2d5da1;   /* Blue Ballpoint Pen */
+  --secondary-ink: #fdfbf7;
 
-  --border: rgba(0, 0, 0, 0.1);
-  --border-strong: rgba(0, 0, 0, 0.2);
+  --border: #2d2d2d;      /* Pencil Lead */
+  --border-strong: #2d2d2d;
   
   /* Also used as text on the paper background, where #ff4d4d was only 3.2:1. */
   --accent: #d32f2f;
@@ -67,11 +74,11 @@
   --surface: #ffffff;
   --surface-2: #fdfbf7;
 
-  /* Shadows - Soft Apple Shadows */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.12);
-  --shadow-sticky: 0 4px 12px rgba(0, 0, 0, 0.15);
+  /* Shadows - Hard Offset */
+  --shadow-sm: 2px 2px 0px 0px var(--ink);
+  --shadow-md: 4px 4px 0px 0px var(--ink);
+  --shadow-lg: 8px 8px 0px 0px var(--ink);
+  --shadow-sticky: 4px 4px 0px 0px var(--ink);
   --scrim: rgba(45, 45, 45, 0.5);
 
   /* Sticky paper (Keep current but map to new variables) */
@@ -135,10 +142,10 @@
     --surface: #2d2d2d;
     --surface-2: #1e1e1e;
 
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
-    --shadow-sticky: 0 4px 12px rgba(0, 0, 0, 0.5);
+    --shadow-sm: 2px 2px 0px 0px var(--ink);
+    --shadow-md: 4px 4px 0px 0px var(--ink);
+    --shadow-lg: 8px 8px 0px 0px var(--ink);
+    --shadow-sticky: 4px 4px 0px 0px var(--ink);
     --scrim: rgba(0, 0, 0, 0.7);
   }
 }
@@ -172,9 +179,9 @@
   --surface: #2d2d2d;
   --surface-2: #1e1e1e;
 
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
-  --shadow-sticky: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 2px 2px 0px 0px var(--ink);
+  --shadow-md: 4px 4px 0px 0px var(--ink);
+  --shadow-lg: 8px 8px 0px 0px var(--ink);
+  --shadow-sticky: 4px 4px 0px 0px var(--ink);
   --scrim: rgba(0, 0, 0, 0.7);
 }

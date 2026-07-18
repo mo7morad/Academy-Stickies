@@ -1,18 +1,27 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import { stripTags } from "../../shared/text";
 import type { Me, WallResponse } from "../../shared/types";
 import { deleteSticky, getWall, setWallPublic, uploadAvatar } from "../api";
 import { Avatar } from "../components/Avatar";
 import { HeaderActions } from "../components/HeaderActions";
+import { Icon } from "../components/Icon";
 import { Nav } from "../components/Nav";
 import { ProfileBody } from "../components/ProfileBody";
 import { Sheet } from "../components/Sheet";
 import { StickyNote } from "../components/StickyNote";
-import { WallProfileHeader } from "../components/WallProfileHeader";
 import { Spinner, Switch } from "../components/controls";
 import { squareCrop } from "../lib/image";
+import { resolveProfileLinks } from "../lib/links";
 import { navigate } from "../router";
 import { useToast } from "../toast";
 
+/**
+ * Someone's profile and the stickies the cohort left them.
+ *
+ * Desktop reads as a page: one identity hero across the top, then the profile
+ * and the wall side by side, so neither buries the other. Phones keep the wall
+ * above the fold and move the profile into a sheet.
+ */
 export function Wall({
   me,
   memberId,
@@ -116,18 +125,7 @@ export function Wall({
   const title = isSelf ? "Your Wall" : (wall?.member.name ?? "Wall");
   const count = wall?.stickies.length ?? 0;
   const profile = wall?.profile ?? null;
-
-  const headerProps = wall ? {
-    wall,
-    profile,
-    me,
-    isSelf,
-    uploading,
-    fileRef,
-    onPickAvatar,
-    setShowProfile,
-    onGive,
-  } : null;
+  const links = profile ? resolveProfileLinks(profile) : [];
 
   return (
     <>
@@ -152,9 +150,89 @@ export function Wall({
           </div>
         ) : (
           <>
-            <div class="hidden-on-desktop">
-              {headerProps && <WallProfileHeader {...headerProps} />}
-            </div>
+            <header
+              class={`wall-hero ${isSelf ? "wall-hero--self" : ""} ${profile ? "wall-hero--with-about" : ""}`}
+            >
+              <div class="wall-hero__avatar">
+                <Avatar
+                  name={wall.member.name}
+                  url={wall.member.avatarUrl}
+                  size="xxl"
+                  eager
+                />
+                {isSelf && (
+                  <>
+                    <button
+                      class="icon-btn wall-hero__camera"
+                      aria-label="Change photo"
+                      onClick={() => fileRef.current?.click()}
+                    >
+                      {uploading ? <Spinner /> : <Icon name="camera" size={18} />}
+                    </button>
+                    <input
+                      ref={fileRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      hidden
+                      onChange={onPickAvatar}
+                    />
+                  </>
+                )}
+              </div>
+
+              <div class="wall-hero__text">
+                <h1 class="wall-hero__name">{wall.member.name}</h1>
+
+                <div class="wall-hero__meta">
+                  {profile?.session && (
+                    <span class="chip chip--session">{profile.session} session</span>
+                  )}
+                  {isSelf && <span class="chip">{me.email}</span>}
+                </div>
+
+                {profile?.tagline && (
+                  <p class="wall-hero__tagline">{stripTags(profile.tagline)}</p>
+                )}
+
+                {links.length > 0 && (
+                  <div class="wall-hero__links">
+                    {links.map((l) => (
+                      <a
+                        key={l.url}
+                        class="chip chip--link"
+                        href={l.url}
+                        target="_blank"
+                        rel="noopener noreferrer nofollow"
+                      >
+                        <Icon name={l.icon} size={13} />
+                        {l.label}
+                      </a>
+                    ))}
+                  </div>
+                )}
+
+                <div class="wall-hero__actions">
+                  {profile && (
+                    <button
+                      class="btn btn--tinted hidden-on-desktop"
+                      onClick={() => setShowProfile(true)}
+                    >
+                      <Icon name="person" size={16} />
+                      {isSelf ? "Your profile" : "Read profile"}
+                    </button>
+                  )}
+                  {!isSelf && (
+                    <button
+                      class="btn btn--filled"
+                      onClick={() => onGive(wall.member.id)}
+                    >
+                      <Icon name="plus" size={16} />
+                      Give a sticky
+                    </button>
+                  )}
+                </div>
+              </div>
+            </header>
 
             {isSelf && (
               <div class="group">
@@ -172,34 +250,33 @@ export function Wall({
               </div>
             )}
 
-            {!wall.visible ? (
-              <div class="wall-private">
-                {profile ? (
-                  <div class="wall-profile-desktop">
-                    <div class="hidden-on-mobile">
-                      {headerProps && <WallProfileHeader {...headerProps} />}
-                    </div>
-                    <div class="empty empty--private">
-                      <div class="empty__emoji">🔒</div>
-                      <div class="empty__title">This wall is private</div>
-                      <p>
-                        {wall.member.name} hasn't shared their wall yet — but you can
-                        still read their profile and leave them a note.
-                      </p>
-                      <button
-                        class="btn btn--filled empty__action hidden-on-desktop"
-                        onClick={() => onGive(wall.member.id)}
-                      >
-                        Leave them a sticky anyway
-                      </button>
-                    </div>
-                    <ProfileBody
-                      intro={profile.intro}
-                      sections={profile.sections}
-                      links={profile.links}
-                    />
-                  </div>
-                ) : (
+            {/* Nothing to set beside the profile means no second column — a
+                private or empty wall would otherwise leave half the page void
+                next to a long profile. */}
+            <div
+              class={`wall-body ${wall.visible && count > 0 ? "" : "wall-body--single"}`}
+            >
+              {profile && (
+                <section class="wall-about hidden-on-mobile">
+                  {/* "Profile", not "About" — most members title their own
+                      first section "About Me", and the two stacked read as a
+                      stutter. */}
+                  <h2 class="wall-col__title">Profile</h2>
+                  <ProfileBody
+                    intro={profile.intro}
+                    sections={profile.sections}
+                    links={profile.links}
+                    showLinks={false}
+                  />
+                </section>
+              )}
+
+              <section class="wall-notes">
+                <h2 class="wall-col__title">
+                  Stickies{wall.visible && count > 0 ? ` · ${count}` : ""}
+                </h2>
+
+                {!wall.visible ? (
                   <div class="empty">
                     <div class="empty__emoji">🔒</div>
                     <div class="empty__title">This wall is private</div>
@@ -207,77 +284,55 @@ export function Wall({
                       {wall.member.name} hasn't shared their wall yet — but you can
                       still read their profile and leave them a note.
                     </p>
-                    <button
-                      class="btn btn--filled empty__action"
-                      onClick={() => onGive(wall.member.id)}
-                    >
-                      Leave them a sticky anyway
-                    </button>
                   </div>
-                )}
-              </div>
-            ) : (
-              <div class="wall-layout">
-                {profile && (
-                  <div class="wall-sidebar hidden-on-mobile">
-                    {headerProps && <WallProfileHeader {...headerProps} />}
-                    <ProfileBody
-                      intro={profile.intro}
-                      sections={profile.sections}
-                      links={profile.links}
-                    />
-                  </div>
-                )}
-                <div class="wall-main">
-                  {count === 0 ? (
-                    <div class="empty">
-                      <div class="empty__emoji">🗒️</div>
-                      <div class="empty__title">
-                        {isSelf ? "No stickies yet" : "An empty wall"}
-                      </div>
-                      <p>
-                        {isSelf
-                          ? "When academy members describe you, their notes land here."
-                          : `Be the first to leave ${wall.member.name.split(" ")[0]} a note.`}
-                      </p>
+                ) : count === 0 ? (
+                  <div class="empty">
+                    <div class="empty__emoji">🗒️</div>
+                    <div class="empty__title">
+                      {isSelf ? "No stickies yet" : "An empty wall"}
                     </div>
-                  ) : (
-                    <>
-                      {count > 3 && (
-                        <input
-                          type="search"
-                          class="field"
-                          placeholder="Search these stickies…"
-                          value={query}
-                          aria-label="Search stickies"
-                          onInput={(e) =>
-                            setQuery((e.currentTarget as HTMLInputElement).value)
-                          }
-                        />
-                      )}
-                      {filtered.length === 0 ? (
-                        <div class="empty">
-                          <div class="empty__emoji">🔍</div>
-                          <div class="empty__title">No stickies found</div>
-                          <p>Nothing matched “{query}”.</p>
-                        </div>
-                      ) : (
-                        <div class="wall">
-                          {filtered.map((s) => (
-                            <StickyNote
-                              key={s.id}
-                              sticky={s}
-                              canDelete={isSelf}
-                              onDelete={removeSticky}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
+                    <p>
+                      {isSelf
+                        ? "When academy members describe you, their notes land here."
+                        : `Be the first to leave ${wall.member.name.split(" ")[0]} a note.`}
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {count > 3 && (
+                      <input
+                        type="search"
+                        class="field"
+                        placeholder="Search these stickies…"
+                        value={query}
+                        aria-label="Search stickies"
+                        onInput={(e) =>
+                          setQuery((e.currentTarget as HTMLInputElement).value)
+                        }
+                      />
+                    )}
+                    {filtered.length === 0 ? (
+                      <div class="empty">
+                        <div class="empty__emoji">🔍</div>
+                        <div class="empty__title">No stickies found</div>
+                        <p>Nothing matched “{query}”.</p>
+                      </div>
+                    ) : (
+                      <div class="wall">
+                        {filtered.map((s) => (
+                          <StickyNote
+                            key={s.id}
+                            sticky={s}
+                            canDelete={isSelf}
+                            onDelete={removeSticky}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </section>
+            </div>
           </>
         )}
       </main>

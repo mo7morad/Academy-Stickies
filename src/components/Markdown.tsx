@@ -1,4 +1,5 @@
 import type { ComponentChildren } from "preact";
+import { normalizeProse } from "../../shared/text";
 
 /**
  * A deliberately small Markdown renderer for cohort profile prose.
@@ -7,10 +8,16 @@ import type { ComponentChildren } from "preact";
  * setting innerHTML — there is no path for authored text to become markup.
  * It covers what people actually wrote: paragraphs, bullet/numbered lists,
  * bold, italics and links. Anything else renders as plain text.
+ *
+ * The one exception is the hard break authors wrote as `<br/>`: escaping it
+ * put the tag on screen. `normalizeProse` reduces every spelling of it to the
+ * literal `<br>` that the last INLINE alternative below matches, and that
+ * alternative emits an element — the author's tag never becomes markup, it
+ * becomes a break we chose to draw. Every other tag it removes outright.
  */
 
 const INLINE =
-  /\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)|\*\*([^*]+)\*\*|__([^_]+)__|(?<![\w*])\*([^*\n]+)\*(?![\w*])|(https?:\/\/[^\s<>()[\]]+)/g;
+  /\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)|\*\*([^*]+)\*\*|__([^_]+)__|(?<![\w*])\*([^*\n]+)\*(?![\w*])|(https?:\/\/[^\s<>()[\]]+)|(<br>)/g;
 
 function hostOf(url: string): string {
   try {
@@ -38,8 +45,10 @@ function inline(text: string): ComponentChildren[] {
   while ((m = INLINE.exec(text)) !== null) {
     if (m.index > last) out.push(text.slice(last, m.index));
 
-    const [, label, url, bold, boldAlt, italic, bare] = m;
-    if (url) {
+    const [, label, url, bold, boldAlt, italic, bare, br] = m;
+    if (br) {
+      out.push(<br key={key++} />);
+    } else if (url) {
       out.push(
         <Link key={key++} href={url}>
           {label?.trim() || hostOf(url)}
@@ -70,7 +79,7 @@ const NUMBERED = /^\s*\d+[.)]\s+(.*)$/;
 const HEADING = /^\s*#{1,6}\s+(.*\S)\s*$/;
 
 export function Markdown({ text }: { text: string }) {
-  const lines = text.split("\n");
+  const lines = normalizeProse(text).split("\n");
   const blocks: ComponentChildren[] = [];
 
   let paragraph: string[] = [];

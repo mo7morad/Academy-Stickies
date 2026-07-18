@@ -15,6 +15,7 @@ export type IconName =
   | "check"
   | "paperplane"
   | "globe"
+  | "note"
   | "sparkles"
   | "github"
   | "linkedin"
@@ -68,6 +69,13 @@ const PATHS: Record<IconName, JSX.Element> = {
     <>
       <circle cx="12" cy="12" r="8.5" />
       <path d="M3.5 12h17M12 3.5c2.5 2.4 2.5 14.6 0 17M12 3.5c-2.5 2.4-2.5 14.6 0 17" />
+    </>
+  ),
+  // A sticky with its corner peeled up.
+  note: (
+    <>
+      <path d="M5 4h14a1 1 0 0 1 1 1v9l-6 6H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z" />
+      <path d="M20 14h-5a1 1 0 0 0-1 1v5" />
     </>
   ),
   sparkles: (

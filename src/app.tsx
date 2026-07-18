@@ -2,6 +2,7 @@ import type { JSX } from "preact";
 import { useCallback, useEffect, useState } from "preact/hooks";
 import type { Me } from "../shared/types";
 import { getMe, logout as apiLogout } from "./api";
+import { AppFooter } from "./components/AppFooter";
 import { HeaderActions } from "./components/HeaderActions";
 import { Icon } from "./components/Icon";
 import { Nav } from "./components/Nav";
@@ -145,9 +146,7 @@ export function App() {
     <>
       {content}
 
-      <footer class="app-footer">
-        Made by <a href="#/m/mo7morad">Morad</a>, <a href="#/m/javhoir">John</a>, and <a href="#/m/keneth">Ken</a>
-      </footer>
+      <AppFooter />
 
       <button class="fab" onClick={() => openGive()} aria-label="New sticky">
         <Icon name="plus" size={20} />
