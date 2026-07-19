@@ -531,9 +531,9 @@ app.post("/stickies", requireAuth, async (c) => {
 
   const stickyId = newId();
 
-  // Anonymous stickies get a stable, non-reversible codename (e.g. "Pink Leopard").
+  // Anonymous stickies get a random codename (e.g. "Pink Leopard").
   const pseudo = isAnonymous
-    ? pseudonymFor(me.id, recipientId, c.env.SESSION_SECRET)
+    ? pseudonymFor()
     : null;
 
   // Optional photo attachment.
