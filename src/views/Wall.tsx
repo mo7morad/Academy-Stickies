@@ -9,6 +9,7 @@ import { Nav } from "../components/Nav";
 import { ProfileBody } from "../components/ProfileBody";
 import { Sheet } from "../components/Sheet";
 import { StickyNote } from "../components/StickyNote";
+import { SystemNote } from "../components/SystemNote";
 import { Spinner, Switch } from "../components/controls";
 import { squareCrop } from "../lib/image";
 import { resolveProfileLinks } from "../lib/links";
@@ -272,6 +273,8 @@ export function Wall({
               )}
 
               <section class="wall-notes">
+                <SystemNote />
+
                 {/* The empty and private states name themselves, so the column
                     title only earns its place once there are notes to label. */}
                 {wall.visible && count > 0 && (
