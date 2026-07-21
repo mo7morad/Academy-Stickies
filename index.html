@@ -16,8 +16,14 @@
     <meta name="apple-mobile-web-app-title" content="Stickies" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="description" content="A private board of sticky notes between academy members." />
-    <!-- SVG for tabs that take it; iOS only ever reads the PNG. -->
-    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <!-- Safari requests /favicon.ico whether or not it is declared. This is a
+         single-page app, so that request used to fall through to index.html,
+         served 200 as text/html — Safari drew a letter tile instead. A real
+         icon has to exist at that path. -->
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <!-- SVG for tabs that take it; iOS only ever reads the PNG. Both are the
+         small-size mark — icon.svg keeps the full art for the home screen. -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <!-- Fonts are self-hosted (see src/styles/fonts.css); preload just the two

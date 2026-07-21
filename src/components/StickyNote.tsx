@@ -10,10 +10,16 @@ function rotationFor(id: string): number {
 
 export function StickyNote({
   sticky,
+  subject,
   canDelete,
   onDelete,
 }: {
   sticky: Sticky;
+  /** Whose wall this is, when it isn't the reader's own. The note was written
+   *  to its recipient, so on someone else's wall "describes you as" addressed
+   *  the wrong person — their own name goes there instead. A name is also the
+   *  one substitution that never guesses at somebody's pronouns. */
+  subject?: string | null;
   canDelete?: boolean;
   onDelete?: (id: string) => void;
 }) {
@@ -33,7 +39,9 @@ export function StickyNote({
       <div class="sticky__body">
         {sticky.describedAs && (
           <div class="sticky__section">
-            <div class="sticky__eyebrow">describes you as</div>
+            <div class="sticky__eyebrow">
+              describes {subject ?? "you"} as
+            </div>
             <p class="sticky__text">{sticky.describedAs}</p>
           </div>
         )}

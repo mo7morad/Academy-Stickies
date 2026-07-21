@@ -368,6 +368,9 @@ export function Wall({
                             <StickyNote
                               key={s.id}
                               sticky={s}
+                              subject={
+                                isSelf ? null : wall.member.name.split(" ")[0]
+                              }
                               canDelete={isSelf}
                               onDelete={removeSticky}
                             />

@@ -8,7 +8,7 @@ import { getMembers } from "../api";
 const CREDITS = [
   { label: "John", fullName: "Muhammadjonov Javohir" },
   { label: "Ken", fullName: "Kenneth Muyoyo Omondi" },
-  { label: "Morad", fullName: "Mohamed Essam Ahmed Morad Mohamed Morad" },
+  { label: "Morad", fullName: "Mohamed Morad (Moe)" },
 ];
 
 /**
@@ -49,10 +49,9 @@ function useRoster(): RosterMember[] | null {
 }
 
 /** Exact first, then every-name-part. A roster entry that carries extra given
- *  names ("Mohamed Essam Ahmed Morad Mohamed Morad") still resolves from the
- *  shorter form above — dropping a name part used to silently flatten a credit
- *  into plain text. Ambiguous matches resolve to nothing rather than the wrong
- *  person's wall. */
+ *  names still resolves from the shorter form above — dropping a name part used
+ *  to silently flatten a credit into plain text. Ambiguous matches resolve to
+ *  nothing rather than the wrong person's wall. */
 function findMember(
   members: RosterMember[],
   fullName: string,
