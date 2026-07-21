@@ -478,6 +478,13 @@
   text-align: right;
   font-size: var(--t-tiny);
   color: var(--ink-3);
+  /* A limit nobody is near is noise. It fades in with the first character
+     rather than being removed, so the field never resizes as you type. */
+  opacity: 0;
+  transition: opacity 160ms var(--ease-out);
+}
+.field-count--on {
+  opacity: 1;
 }
 
 /* ===========================================================================
@@ -1308,10 +1315,56 @@
 /* ===========================================================================
    Give a sticky
 =========================================================================== */
-.give__to {
-  color: var(--brand);
-  text-transform: none;
-  letter-spacing: 0;
+/* The recipient, once chosen. This replaces the search field and the strip of
+   faces outright: keeping a chooser on screen after the choice is made buried
+   the answer to "who is this for?" in the question. */
+.give__chosen {
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+  padding: var(--s4);
+  margin-bottom: var(--s5);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-wobbly-1);
+  box-shadow: var(--shadow-sm);
+}
+/* The same marker ring the picker draws around a selected face, so the card
+   reads as that choice, settled. */
+.give__chosen .avatar {
+  border-color: var(--brand);
+  box-shadow: 3px 3px 0 0 var(--brand);
+}
+.give__chosen-text {
+  flex: 1;
+  min-width: 0;
+}
+.give__chosen-eyebrow {
+  font-size: var(--t-tiny);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.give__chosen-name,
+.give__chosen-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.give__chosen-name {
+  font-family: var(--font-heading);
+  font-size: var(--t-heading);
+  font-weight: 700;
+  line-height: 1.25;
+}
+.give__chosen-sub {
+  margin-top: 2px;
+  font-size: var(--t-small);
+  color: var(--ink-3);
+}
+.give__change {
+  flex: 0 0 auto;
 }
 .give__loading,
 .give__none {

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import { stripTags } from "../../shared/text";
 import type { Me, RosterMember } from "../../shared/types";
 import { MAX_FIELD_LEN, STICKY_COLORS } from "../../shared/types";
 import { createSticky, getMembers, getMentors } from "../api";
@@ -28,6 +29,11 @@ export function GiveSticky({
   const [photo, setPhoto] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  /** The 200-face strip is a chooser, not a fixture: it is only on screen while
+   *  there is still a choice to make. Arriving from someone's wall, the choice
+   *  is already made and the note is what the writer came for. */
+  const [picking, setPicking] = useState(!prefillRecipientId);
 
   useEffect(() => {
     Promise.all([getMembers(), getMentors()])
@@ -82,6 +88,18 @@ export function GiveSticky({
   const canSubmit =
     !!recipientId && (describedAs.trim().length > 0 || goodAt.trim().length > 0);
 
+  function choose(id: string) {
+    setRecipientId(id);
+    setQuery("");
+    setPicking(false);
+  }
+
+  function changeRecipient() {
+    setPicking(true);
+    // Reopening is a deliberate act — land the caret where the searching happens.
+    requestAnimationFrame(() => searchRef.current?.focus());
+  }
+
   async function submit() {
     if (!canSubmit || busy) return;
     setBusy(true);
@@ -109,17 +127,35 @@ export function GiveSticky({
 
   return (
     <div class="give">
-      <div class="group__header">
-        To {recipient && <span class="give__to">· {recipient.name}</span>}
-      </div>
-
       {!members ? (
         <div class="give__loading">
           <Spinner />
         </div>
+      ) : recipient && !picking ? (
+        // Who the note is for, said once and said plainly — a face and a full
+        // name, not a highlighted thumbnail to pick back out of a crowd.
+        <div class="give__chosen">
+          <Avatar name={recipient.name} url={recipient.thumbUrl} size="lg" />
+          <div class="give__chosen-text">
+            <div class="give__chosen-eyebrow">Writing to</div>
+            <div class="give__chosen-name">{recipient.name}</div>
+            {(recipient.tagline || recipient.session) && (
+              <div class="give__chosen-sub">
+                {recipient.tagline
+                  ? stripTags(recipient.tagline)
+                  : recipient.session}
+              </div>
+            )}
+          </div>
+          <button class="btn btn--plain give__change" onClick={changeRecipient}>
+            Change
+          </button>
+        </div>
       ) : (
         <>
+          <div class="group__header">To</div>
           <input
+            ref={searchRef}
             type="search"
             class="field"
             placeholder="Search for someone…"
@@ -139,7 +175,7 @@ export function GiveSticky({
                     role="option"
                     aria-selected={selected}
                     class={`picker__item ${selected ? "picker__item--on" : ""}`}
-                    onClick={() => setRecipientId(m.id)}
+                    onClick={() => choose(m.id)}
                   >
                     <Avatar name={m.name} url={m.thumbUrl} size="md" />
                     <span class="picker__name">{m.name.split(" ")[0]}</span>
@@ -262,7 +298,7 @@ function FieldArea({
         aria-label={label}
         onInput={(e) => onInput((e.target as HTMLTextAreaElement).value)}
       />
-      <div class="field-count">
+      <div class={`field-count ${value ? "field-count--on" : ""}`}>
         {value.length}/{MAX_FIELD_LEN}
       </div>
     </div>

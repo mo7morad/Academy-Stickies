@@ -43,7 +43,7 @@ export function SendFeedback({ onSent }: { onSent: () => void }) {
             aria-label="Feedback"
             onInput={(e) => setMessage((e.target as HTMLTextAreaElement).value)}
           />
-          <div class="field-count">
+          <div class={`field-count ${message ? "field-count--on" : ""}`}>
             {message.length}/{MAX_FEEDBACK_LEN}
           </div>
         </div>
