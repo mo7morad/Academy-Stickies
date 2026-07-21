@@ -10,7 +10,12 @@ import {
   randomToken,
   verifySession,
 } from "../../lib/auth";
-import { emailConfigured, sendMagicLink, sendStickyNotification } from "../../lib/email";
+import {
+  emailConfigured,
+  sendFeedbackNotification,
+  sendMagicLink,
+  sendStickyNotification,
+} from "../../lib/email";
 import {
   MAX_AVATAR_BYTES,
   MAX_PHOTO_BYTES,
@@ -38,7 +43,10 @@ type Env = {
   BREVO_API_KEY?: string;
   EMAIL_FROM?: string;
   EMAIL_FROM_NAME?: string;
+  FEEDBACK_NOTIFY_EMAIL?: string;
 };
+
+const MAX_FEEDBACK_LEN = 2000;
 
 interface MemberRow {
   id: string;
@@ -650,6 +658,37 @@ app.delete("/stickies/:id", requireSession, async (c) => {
     c.executionCtx.waitUntil(c.env.MEDIA.delete(sticky.photo_key).catch(() => {}));
   }
   return c.json({ ok: true });
+});
+
+// ---------------------------------------------------------------------------
+// Feedback
+// ---------------------------------------------------------------------------
+
+app.post("/feedback", requireAuth, async (c) => {
+  const me = c.get("member");
+  const body = await c.req
+    .json<{ message?: string }>()
+    .catch(() => ({}) as { message?: string });
+  const message = String(body.message ?? "").trim().slice(0, MAX_FEEDBACK_LEN);
+  if (!message) return c.json({ error: "Write something first." }, 400);
+
+  const id = newId();
+  const createdAt = Date.now();
+  await c.env.DB.prepare(
+    "INSERT INTO feedback (id, member_id, message, created_at) VALUES (?, ?, ?, ?)",
+  )
+    .bind(id, me.id, message, createdAt)
+    .run();
+
+  if (c.env.FEEDBACK_NOTIFY_EMAIL) {
+    c.executionCtx.waitUntil(
+      sendFeedbackNotification(c.env, c.env.FEEDBACK_NOTIFY_EMAIL, me.name, message).catch(
+        console.error,
+      ),
+    );
+  }
+
+  return c.json({ ok: true }, 201);
 });
 
 // ---------------------------------------------------------------------------

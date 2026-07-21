@@ -25,3 +25,4 @@ bucket_name = "stickies-media"
 # `wrangler pages secret put` (see the Makefile) in production.
 [vars]
 EMAIL_FROM_NAME = "Academy Stickies"
+FEEDBACK_NOTIFY_EMAIL = "23523243@students.uii.ac.id"

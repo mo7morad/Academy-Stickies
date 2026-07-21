@@ -13,6 +13,7 @@ import { GiveSticky } from "./views/GiveSticky";
 import { Login } from "./views/Login";
 import { Mentors } from "./views/Mentors";
 import { Roster } from "./views/Roster";
+import { SendFeedback } from "./views/SendFeedback";
 import { Wall } from "./views/Wall";
 
 type Theme = "light" | "dark";
@@ -72,6 +73,7 @@ export function App() {
   const [give, setGive] = useState<{ open: boolean; recipient?: string }>({
     open: false,
   });
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [refresh, setRefresh] = useState(0);
 
   useEffect(() => {
@@ -88,6 +90,9 @@ export function App() {
     setGive({ open: false });
     setRefresh((r) => r + 1);
   }, []);
+
+  const openFeedback = useCallback(() => setFeedbackOpen(true), []);
+  const onFeedbackSent = useCallback(() => setFeedbackOpen(false), []);
 
   const logout = useCallback(async () => {
     await apiLogout();
@@ -146,7 +151,7 @@ export function App() {
     <>
       {content}
 
-      <AppFooter />
+      <AppFooter onSendFeedback={openFeedback} />
 
       <button class="fab" onClick={() => openGive()} aria-label="New sticky">
         <Icon name="plus" size={20} />
@@ -160,6 +165,12 @@ export function App() {
             prefillRecipientId={give.recipient}
             onCreated={onCreated}
           />
+        </Sheet>
+      )}
+
+      {feedbackOpen && (
+        <Sheet title="Send Feedback" onClose={() => setFeedbackOpen(false)}>
+          <SendFeedback onSent={onFeedbackSent} />
         </Sheet>
       )}
     </>

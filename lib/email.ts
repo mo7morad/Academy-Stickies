@@ -141,6 +141,64 @@ export async function sendStickyNotification(
   }
 }
 
+export async function sendFeedbackNotification(
+  env: EmailEnv,
+  to: string,
+  authorName: string,
+  message: string,
+): Promise<void> {
+  if (!emailConfigured(env)) {
+    console.warn("Skipping feedback email notification: email not configured");
+    return;
+  }
+  const res = await sendViaBrevo(
+    env,
+    to,
+    "Academy Stickies",
+    feedbackNotificationTemplate(authorName, message),
+  );
+  if (!res.ok) {
+    const body = await res.text();
+    console.error(`Email send failed (${res.status}): ${body}`);
+  }
+}
+
+export function feedbackNotificationTemplate(
+  authorName: string,
+  message: string,
+): { subject: string; html: string; text: string } {
+  const safeAuthorName = escapeHtml(authorName);
+  const safeMessage = escapeHtml(message);
+  const subject = `New feedback from ${safeAuthorName}`;
+  const text = [
+    `${authorName} sent feedback on Academy Stickies:`,
+    "",
+    message,
+  ].join("\n");
+
+  const html = `<!doctype html>
+<html>
+  <body style="margin:0;padding:0;background:#f2f2f7;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',Arial,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f2f2f7;padding:32px 16px;">
+      <tr><td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:460px;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.08);">
+          <tr><td style="padding:36px 32px 8px;text-align:center;font-size:44px;line-height:1;">💬</td></tr>
+          <tr><td style="padding:8px 32px 0;text-align:center;">
+            <h1 style="margin:0;font-size:24px;font-weight:700;color:#1c1c1e;letter-spacing:-0.4px;">New Feedback</h1>
+          </td></tr>
+          <tr><td style="padding:16px 32px 0;color:#3a3a3c;font-size:16px;line-height:1.5;">
+            <strong>${safeAuthorName}</strong> sent feedback on Academy Stickies:
+          </td></tr>
+          <tr><td style="padding:16px 32px 28px;color:#1c1c1e;font-size:16px;line-height:1.5;white-space:pre-wrap;">${safeMessage}</td></tr>
+        </table>
+      </td></tr>
+    </table>
+  </body>
+</html>`;
+
+  return { subject, html, text };
+}
+
 export function stickyNotificationTemplate(
   recipientName: string,
   authorName: string,

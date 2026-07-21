@@ -68,7 +68,7 @@ function findMember(
   return loose.length === 1 ? loose[0] : null;
 }
 
-export function AppFooter() {
+export function AppFooter({ onSendFeedback }: { onSendFeedback: () => void }) {
   const members = useRoster();
 
   const hrefFor = (fullName: string): string | null => {
@@ -104,6 +104,9 @@ export function AppFooter() {
       <p class="app-footer__tag">
         Academy Stickies · say something nice about someone today
       </p>
+      <button class="app-footer__feedback" onClick={onSendFeedback}>
+        Send feedback
+      </button>
     </footer>
   );
 }

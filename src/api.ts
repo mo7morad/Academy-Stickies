@@ -169,3 +169,13 @@ export async function createSticky(input: NewSticky): Promise<CreateStickyResult
 export async function deleteSticky(id: string): Promise<void> {
   await parse(await fetch(`/api/stickies/${id}`, { method: "DELETE" }));
 }
+
+export async function sendFeedback(message: string): Promise<{ ok: true }> {
+  return parse(
+    await fetch("/api/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message }),
+    }),
+  );
+}
