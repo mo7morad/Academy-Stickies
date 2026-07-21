@@ -11,23 +11,37 @@ const CREDITS = [
   { label: "Morad", fullName: "Mohamed Essam Ahmed Morad Mohamed Morad" },
 ];
 
-/** The credits can't change mid-session, so the footer reads the roster once
- *  and every route reuses it. Cleared on failure so a later mount can retry. */
-let rosterOnce: Promise<RosterMember[]> | null = null;
-
+/**
+ * getMembers() is shared across the app, so on the roster page this costs
+ * nothing — the grid is already fetching it. Everywhere else it's a few
+ * hundred members fetched to resolve three links in a footer nobody has
+ * scrolled to yet, so it waits for the browser to go idle rather than
+ * competing with the view above it.
+ */
 function useRoster(): RosterMember[] | null {
   const [members, setMembers] = useState<RosterMember[] | null>(null);
 
   useEffect(() => {
     let alive = true;
-    const pending = (rosterOnce ??= getMembers());
-    pending
-      .then((m) => alive && setMembers(m))
-      .catch(() => {
-        if (rosterOnce === pending) rosterOnce = null;
-      });
+    const load = () => {
+      getMembers()
+        .then((m) => alive && setMembers(m))
+        .catch(() => {
+          /* the credits stay plain text */
+        });
+    };
+
+    // Safari only shipped requestIdleCallback recently; a timeout is close
+    // enough for work this far off the critical path.
+    const hasIdle = typeof window.requestIdleCallback === "function";
+    const handle = hasIdle
+      ? window.requestIdleCallback(load, { timeout: 3000 })
+      : window.setTimeout(load, 1200);
+
     return () => {
       alive = false;
+      if (hasIdle) window.cancelIdleCallback(handle);
+      else clearTimeout(handle);
     };
   }, []);
 

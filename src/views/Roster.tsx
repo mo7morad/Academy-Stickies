@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "preact/hooks";
 import { stripTags } from "../../shared/text";
 import type { RosterMember } from "../../shared/types";
-import { getMembers } from "../api";
+import { getMembers, invalidateMembers } from "../api";
 import { Avatar } from "../components/Avatar";
 import { Segmented, Spinner } from "../components/controls";
 import { Icon } from "../components/Icon";
@@ -26,6 +26,9 @@ export function Roster({
 
   useEffect(() => {
     let alive = true;
+    // A new sticky changes the counts on these cards, so a refresh has to go
+    // past the shared cache. The first load reuses it.
+    if (refreshSignal > 0) invalidateMembers();
     getMembers()
       .then((m) => {
         if (!alive) return;

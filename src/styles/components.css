@@ -1517,6 +1517,37 @@
   flex: 1;
   position: relative;
   z-index: 1;
+  /* Clear of the dismiss button in its corner. */
+  padding-right: var(--s6);
+}
+
+.system-note__dismiss {
+  position: absolute;
+  top: var(--s3);
+  right: var(--s3);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: inherit;
+  opacity: 0.55;
+  transition: opacity 160ms var(--ease-out), background 160ms var(--ease-out),
+    transform 120ms var(--ease-out);
+}
+.system-note__dismiss:active {
+  transform: scale(0.9);
+}
+@media (hover: hover) and (pointer: fine) {
+  .system-note__dismiss:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.1);
+  }
+}
+:root[data-theme="dark"] .system-note__dismiss:hover {
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .system-note__content h3 {

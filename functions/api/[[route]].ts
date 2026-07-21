@@ -53,7 +53,7 @@ interface MemberRow {
   thumb_key: string | null;
 }
 
-type Variables = { member: MemberRow };
+type Variables = { member: MemberRow; memberId: string };
 type AppContext = Context<{ Bindings: Env; Variables: Variables }>;
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>().basePath("/api");
@@ -119,7 +119,29 @@ function toMe(m: MemberRow): Me {
   };
 }
 
-// Auth middleware: requires a valid signed session cookie.
+/**
+ * Requires a valid session, and nothing else. The cookie is a signed payload
+ * carrying the member id, so establishing *who* is asking costs no database
+ * work at all — only routes that need the member's own name, email or avatar
+ * key have to go and read the row (see requireAuth).
+ *
+ * That distinction is worth keeping: a roster page fires two dozen image
+ * requests, and under requireAuth each one billed a D1 query before it could
+ * hand back a 3KB thumbnail.
+ */
+async function requireSession(c: AppContext, next: Next) {
+  const cookie = getCookie(c, COOKIE_NAME);
+  const memberId = cookie
+    ? await verifySession(cookie, c.env.SESSION_SECRET)
+    : null;
+  if (!memberId) return c.json({ error: "unauthorized" }, 401);
+
+  c.set("memberId", memberId);
+  await next();
+}
+
+/** requireSession, plus the member's own row. For routes that read fields
+ *  beyond the id. A member deleted from the roster mid-session lands here. */
 async function requireAuth(c: AppContext, next: Next) {
   const cookie = getCookie(c, COOKIE_NAME);
   const memberId = cookie
@@ -137,6 +159,7 @@ async function requireAuth(c: AppContext, next: Next) {
   if (!member) return c.json({ error: "unauthorized" }, 401);
 
   c.set("member", member);
+  c.set("memberId", member.id);
   await next();
 }
 
@@ -277,6 +300,27 @@ interface RosterRow {
   tagline: string | null;
 }
 
+/** A roster row plus the prose only a single wall needs. */
+interface ProfileRow extends RosterRow {
+  intro: string | null;
+  sections: string | null;
+  links: string | null;
+}
+
+interface StickyRow {
+  id: string;
+  author_id: string | null;
+  is_anonymous: number;
+  described_as: string;
+  good_at: string;
+  color: string;
+  photo_key: string | null;
+  created_at: number;
+  anon_name: string | null;
+  anon_color: string | null;
+  author_name: string | null;
+}
+
 function toRosterMember(r: RosterRow, meId: string): RosterMember {
   return {
     id: r.id,
@@ -293,8 +337,8 @@ function toRosterMember(r: RosterRow, meId: string): RosterMember {
 
 // The roster deliberately carries only the card-sized bits of a profile
 // (photo, session, tagline). The prose is fetched per member.
-app.get("/members", requireAuth, async (c) => {
-  const me = c.get("member");
+app.get("/members", requireSession, async (c) => {
+  const meId = c.get("memberId");
   const rows = await c.env.DB.prepare(
     `SELECT m.id, m.name, m.avatar_key, m.wall_public,
             p.photo_key, p.thumb_key, p.session, p.tagline,
@@ -304,13 +348,13 @@ app.get("/members", requireAuth, async (c) => {
      ORDER BY m.name COLLATE NOCASE ASC`,
   ).all<RosterRow>();
 
-  const members = (rows.results ?? []).map((r) => toRosterMember(r, me.id));
+  const members = (rows.results ?? []).map((r) => toRosterMember(r, meId));
   return c.json({ members });
 });
 
 // Mentors are read-only: browsable by any signed-in member, but they have no
 // wall and cannot be given stickies, so this is a plain list.
-app.get("/mentors", requireAuth, async (c) => {
+app.get("/mentors", requireSession, async (c) => {
   const rows = await c.env.DB.prepare(
     `SELECT id, slug, name, nickname, role, skills, tagline, photo_key, thumb_key, intro, sections, links
      FROM mentors
@@ -347,27 +391,36 @@ app.get("/mentors", requireAuth, async (c) => {
   return c.json({ mentors });
 });
 
-app.get("/members/:id", requireAuth, async (c) => {
-  const me = c.get("member");
+app.get("/members/:id", requireSession, async (c) => {
+  const meId = c.get("memberId");
   const id = c.req.param("id");
 
-  let member = await c.env.DB.prepare(
-    `SELECT m.id, m.name, m.avatar_key, m.wall_public,
-            p.photo_key, p.thumb_key, p.session, p.tagline, p.intro, p.sections, p.links,
-            (SELECT COUNT(*) FROM stickies s WHERE s.recipient_id = m.id) AS received_count
-     FROM members m
-     LEFT JOIN profiles p ON p.member_id = m.id
-     WHERE m.id = ?`,
-  )
-    .bind(id)
-    .first<
-      RosterRow & {
-        intro: string | null;
-        sections: string | null;
-        links: string | null;
-      }
-    >();
+  // The wall's two reads — whose wall it is, and what's on it — go out in one
+  // batch. They aren't dependent (the visibility check only gates whether the
+  // notes are *returned*), and a wall used to cost three serial D1 round trips
+  // before it could paint. Fetching notes for a wall that turns out to be
+  // private wastes one cheap indexed read; a second round trip cost more.
+  const [memberRes, stickyRes] = await c.env.DB.batch<Record<string, unknown>>([
+    c.env.DB.prepare(
+      `SELECT m.id, m.name, m.avatar_key, m.wall_public,
+              p.photo_key, p.thumb_key, p.session, p.tagline, p.intro, p.sections, p.links,
+              (SELECT COUNT(*) FROM stickies s WHERE s.recipient_id = m.id) AS received_count
+       FROM members m
+       LEFT JOIN profiles p ON p.member_id = m.id
+       WHERE m.id = ?`,
+    ).bind(id),
+    c.env.DB.prepare(
+      `SELECT s.id, s.author_id, s.is_anonymous, s.described_as, s.good_at,
+              s.color, s.photo_key, s.created_at, s.anon_name, s.anon_color,
+              a.name AS author_name
+       FROM stickies s
+       LEFT JOIN members a ON a.id = s.author_id
+       WHERE s.recipient_id = ?
+       ORDER BY s.created_at DESC`,
+    ).bind(id),
+  ]);
 
+  let member = (memberRes.results?.[0] ?? null) as unknown as ProfileRow | null;
   let isMentor = false;
 
   if (!member) {
@@ -412,9 +465,9 @@ app.get("/members/:id", requireAuth, async (c) => {
     };
   }
 
-  const isSelf = member.id === me.id;
+  const isSelf = member.id === meId;
   const visible = isSelf || member.wall_public === 1 || isMentor;
-  const rosterMember = toRosterMember(member, me.id);
+  const rosterMember = toRosterMember(member, meId);
 
   // A profile introduces someone to the cohort, so it stays readable even when
   // they keep their sticky wall private. Members without a profile get null.
@@ -439,37 +492,15 @@ app.get("/members/:id", requireAuth, async (c) => {
     return c.json(res);
   }
 
-  const rows = await c.env.DB.prepare(
-    `SELECT s.id, s.author_id, s.is_anonymous, s.described_as, s.good_at,
-            s.color, s.photo_key, s.created_at, s.anon_name, s.anon_color,
-            a.name AS author_name
-     FROM stickies s
-     LEFT JOIN members a ON a.id = s.author_id
-     WHERE s.recipient_id = ?
-     ORDER BY s.created_at DESC`,
-  )
-    .bind(id)
-    .all<{
-      id: string;
-      author_id: string | null;
-      is_anonymous: number;
-      described_as: string;
-      good_at: string;
-      color: string;
-      photo_key: string | null;
-      created_at: number;
-      anon_name: string | null;
-      anon_color: string | null;
-      author_name: string | null;
-    }>();
+  const stickyRows = (stickyRes.results ?? []) as unknown as StickyRow[];
 
-  const stickies: Sticky[] = (rows.results ?? []).map((r) => ({
+  const stickies: Sticky[] = stickyRows.map((r) => ({
     id: r.id,
     authorName:
       r.is_anonymous === 1 ? (r.anon_name ?? "Anonymous") : r.author_name,
     authorColor: r.is_anonymous === 1 ? r.anon_color : null,
     isAnonymous: r.is_anonymous === 1,
-    mine: r.is_anonymous === 0 && r.author_id === me.id,
+    mine: r.is_anonymous === 0 && r.author_id === meId,
     describedAs: r.described_as,
     goodAt: r.good_at,
     color: (STICKY_COLORS as readonly string[]).includes(r.color)
@@ -600,8 +631,8 @@ app.post("/stickies", requireAuth, async (c) => {
 });
 
 // The recipient can remove a sticky from their own wall.
-app.delete("/stickies/:id", requireAuth, async (c) => {
-  const me = c.get("member");
+app.delete("/stickies/:id", requireSession, async (c) => {
+  const meId = c.get("memberId");
   const id = c.req.param("id");
 
   const sticky = await c.env.DB.prepare(
@@ -610,7 +641,7 @@ app.delete("/stickies/:id", requireAuth, async (c) => {
     .bind(id)
     .first<{ id: string; recipient_id: string; photo_key: string | null }>();
   if (!sticky) return c.json({ error: "not found" }, 404);
-  if (sticky.recipient_id !== me.id) {
+  if (sticky.recipient_id !== meId) {
     return c.json({ error: "You can only remove stickies from your own wall." }, 403);
   }
 
@@ -630,8 +661,8 @@ app.delete("/stickies/:id", requireAuth, async (c) => {
 
 const OPEN_MEDIA_PREFIXES = ["avatars/", "learners/", "mentors/"];
 
-app.get("/media/*", requireAuth, async (c) => {
-  const me = c.get("member");
+app.get("/media/*", requireSession, async (c) => {
+  const meId = c.get("memberId");
   const key = decodeURIComponent(c.req.path.slice("/api/media/".length));
   if (!key) return c.json({ error: "not found" }, 404);
 
@@ -646,8 +677,8 @@ app.get("/media/*", requireAuth, async (c) => {
       .first<{ author_id: string | null; recipient_id: string; wall_public: number }>();
     if (!row) return c.json({ error: "not found" }, 404);
     const allowed =
-      row.recipient_id === me.id ||
-      row.author_id === me.id ||
+      row.recipient_id === meId ||
+      row.author_id === meId ||
       row.wall_public === 1;
     if (!allowed) return c.json({ error: "forbidden" }, 403);
   } else if (!OPEN_MEDIA_PREFIXES.some((p) => key.startsWith(p))) {
@@ -660,15 +691,17 @@ app.get("/media/*", requireAuth, async (c) => {
   const headers = new Headers();
   object.writeHttpMetadata(headers);
   headers.set("etag", object.httpEtag);
-  // Cohort photos never change under a given key, so let the browser keep them.
-  const immutable = key.startsWith("learners/") || key.startsWith("mentors/");
+  // Nothing here is ever rewritten under the same key — cohort photos are
+  // keyed by name, and an avatar upload mints a fresh key each time — so faces
+  // can be cached hard and never revalidated. Sticky photos are the exception:
+  // their key is stable, but the wall around them can turn private, and a long
+  // cache would keep serving a photo the viewer has since lost access to.
+  const rewritable = key.startsWith("stickies/");
   headers.set(
     "Cache-Control",
-    immutable
-      ? "private, max-age=604800, immutable"
-      : key.startsWith("avatars/")
-        ? "private, max-age=3600"
-        : "private, max-age=600",
+    rewritable
+      ? "private, max-age=600"
+      : "private, max-age=31536000, immutable",
   );
   return new Response(object.body, { headers });
 });

@@ -50,15 +50,78 @@ export async function requestLink(
   return parse(res);
 }
 
-export async function getMembers(): Promise<RosterMember[]> {
-  const data = await parse<{ members: RosterMember[] }>(
-    await fetch("/api/members"),
-  );
-  return data.members;
+/**
+ * The full roster, fetched once per page load and shared.
+ *
+ * Two callers want it on the landing page — the grid and the footer credits —
+ * and they used to issue one request each for the same couple of hundred
+ * members. Cleared on failure so a retry isn't stuck with the rejection, and
+ * on refresh so a new sticky shows up in the counts.
+ */
+let rosterCache: Promise<RosterMember[]> | null = null;
+
+export function getMembers(): Promise<RosterMember[]> {
+  if (rosterCache) return rosterCache;
+
+  const pending = fetch("/api/members")
+    .then((res) => parse<{ members: RosterMember[] }>(res))
+    .then((data) => data.members)
+    .catch((err: unknown) => {
+      if (rosterCache === pending) rosterCache = null;
+      throw err;
+    });
+
+  rosterCache = pending;
+  return pending;
 }
 
-export async function getWall(id: string): Promise<WallResponse> {
+/** Drops the shared roster so the next read goes back to the server. */
+export function invalidateMembers(): void {
+  rosterCache = null;
+}
+
+async function requestWall(id: string): Promise<WallResponse> {
   return parse<WallResponse>(await fetch(`/api/members/${id}`));
+}
+
+/** A wall request started by prefetchRoute() before <Wall> mounted. Consumed
+ *  once: every later load — a refresh, a new sticky — must hit the server. */
+let wallPrefetch: { id: string; promise: Promise<WallResponse> } | null = null;
+
+export function getWall(id: string): Promise<WallResponse> {
+  if (wallPrefetch?.id === id) {
+    const { promise } = wallPrefetch;
+    wallPrefetch = null;
+    return promise;
+  }
+  return requestWall(id);
+}
+
+/**
+ * Starts the first view's data request at boot, in parallel with /api/me.
+ *
+ * Loading a wall was four serial round trips before anything appeared: the
+ * HTML, then the JS, then /api/me, then — once <App> had a member and could
+ * finally mount <Wall> — the wall itself. The last two don't depend on each
+ * other, so this overlaps them.
+ *
+ * Only for routes whose URL the hash alone determines. "#/me" is a member id
+ * the server hasn't sent us yet, so it keeps waiting.
+ */
+export function prefetchRoute(hash: string): void {
+  const path = hash.replace(/^#/, "");
+  const wall = path.match(/^\/m\/([^/?]+)/);
+
+  if (wall) {
+    const id = decodeURIComponent(wall[1]);
+    const promise = requestWall(id);
+    // A prefetch nobody ends up consuming — a signed-out visitor, a bad id —
+    // must not surface as an unhandled rejection.
+    promise.catch(() => {});
+    wallPrefetch = { id, promise };
+  } else if (path === "" || path === "/") {
+    getMembers().catch(() => {});
+  }
 }
 
 export async function getMentors(): Promise<Mentor[]> {
