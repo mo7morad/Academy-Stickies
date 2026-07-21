@@ -8,7 +8,7 @@ import { getMembers } from "../api";
 const CREDITS = [
   { label: "John", fullName: "Muhammadjonov Javohir" },
   { label: "Ken", fullName: "Kenneth Muyoyo Omondi" },
-  { label: "Morad", fullName: "Mohamed Morad" },
+  { label: "Morad", fullName: "Mohamed Essam Ahmed Morad" },
 ];
 
 /** The credits can't change mid-session, so the footer reads the roster once
