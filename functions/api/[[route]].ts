@@ -360,8 +360,8 @@ app.get("/members", requireSession, async (c) => {
   return c.json({ members });
 });
 
-// Mentors are read-only: browsable by any signed-in member, but they have no
-// wall and cannot be given stickies, so this is a plain list.
+// The directory itself is read-only — a mentor's wall and notes are fetched
+// per mentor by /members/:id, the same route learners' walls use.
 app.get("/mentors", requireSession, async (c) => {
   const rows = await c.env.DB.prepare(
     `SELECT id, slug, name, nickname, role, skills, tagline, photo_key, thumb_key, intro, sections, links
@@ -433,7 +433,7 @@ app.get("/members/:id", requireSession, async (c) => {
 
   if (!member) {
     const mentor = await c.env.DB.prepare(
-      `SELECT id, slug, name, nickname, role, skills, tagline, photo_key, thumb_key, intro, sections, links,
+      `SELECT id, slug, name, nickname, role, skills, tagline, photo_key, thumb_key, intro, sections, links, wall_public,
               (SELECT COUNT(*) FROM stickies s WHERE s.recipient_id = mentors.id) AS received_count
        FROM mentors
        WHERE id = ?`,
@@ -451,6 +451,7 @@ app.get("/members/:id", requireSession, async (c) => {
         intro: string | null;
         sections: string;
         links: string;
+        wall_public: number;
         received_count: number;
       }>();
 
@@ -461,7 +462,7 @@ app.get("/members/:id", requireSession, async (c) => {
       id: mentor.id,
       name: mentor.name,
       avatar_key: mentor.photo_key,
-      wall_public: 1, // Mentor walls are public
+      wall_public: mentor.wall_public,
       photo_key: mentor.photo_key,
       thumb_key: mentor.thumb_key,
       session: mentor.role, // show role instead of AM/PM session
@@ -474,7 +475,10 @@ app.get("/members/:id", requireSession, async (c) => {
   }
 
   const isSelf = member.id === meId;
-  const visible = isSelf || member.wall_public === 1 || isMentor;
+  // Mentors read the same as learners here: a wall is private until its owner
+  // publishes it. They cannot sign in to flip the switch themselves, so the
+  // column is set for them — the API no longer decides on their behalf.
+  const visible = isSelf || member.wall_public === 1;
   const rosterMember = toRosterMember(member, meId);
 
   // A profile introduces someone to the cohort, so it stays readable even when
@@ -493,6 +497,7 @@ app.get("/members/:id", requireSession, async (c) => {
     const res: WallResponse = {
       member: rosterMember,
       isSelf,
+      isMentor,
       visible: false,
       stickies: [],
       profile,
@@ -521,6 +526,7 @@ app.get("/members/:id", requireSession, async (c) => {
   const res: WallResponse = {
     member: rosterMember,
     isSelf,
+    isMentor,
     visible: true,
     stickies,
     profile,
@@ -707,13 +713,20 @@ app.get("/media/*", requireSession, async (c) => {
 
   if (key.startsWith("stickies/")) {
     const stickyId = key.slice("stickies/".length);
+    // A sticky can be addressed to a learner or to a mentor, and the two live
+    // in different tables. An inner join to `members` alone dropped every
+    // mentor-wall photo on the floor — the row came back empty and the note
+    // rendered a broken image — so both walls are looked up here.
     const row = await c.env.DB.prepare(
-      `SELECT s.author_id, s.recipient_id, m.wall_public
-       FROM stickies s JOIN members m ON m.id = s.recipient_id
+      `SELECT s.author_id, s.recipient_id,
+              COALESCE(m.wall_public, x.wall_public) AS wall_public
+       FROM stickies s
+       LEFT JOIN members m ON m.id = s.recipient_id
+       LEFT JOIN mentors x ON x.id = s.recipient_id
        WHERE s.id = ?`,
     )
       .bind(stickyId)
-      .first<{ author_id: string | null; recipient_id: string; wall_public: number }>();
+      .first<{ author_id: string | null; recipient_id: string; wall_public: number | null }>();
     if (!row) return c.json({ error: "not found" }, 404);
     const allowed =
       row.recipient_id === meId ||

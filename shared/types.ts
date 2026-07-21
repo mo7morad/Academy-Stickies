@@ -40,7 +40,8 @@ export interface Profile {
   links: ProfileLink[];
 }
 
-/** A senior/mentor. Not a roster member: no wall, no stickies, no sign-in. */
+/** A senior/mentor. Not a roster member — no sign-in — but they do have a wall
+ *  and can be given stickies, so their wall is private until it is published. */
 export interface Mentor {
   id: string;
   slug: string;
@@ -86,6 +87,8 @@ export interface Sticky {
 export interface WallResponse {
   member: RosterMember;
   isSelf: boolean;
+  /** Mentors are browsed from their own directory — the wall's Back goes there. */
+  isMentor: boolean;
   visible: boolean; // false => private wall the viewer may not see
   stickies: Sticky[];
   profile: Profile | null; // shown even when the wall itself is private

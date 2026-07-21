@@ -149,6 +149,12 @@ export function Wall({
     }
   }
 
+  /** Back retraces the way in: a mentor is reached from the mentor directory,
+   *  everyone else from the roster. Deep links land right either way. */
+  function goBack() {
+    navigate(wall?.isMentor ? "/mentors" : "/");
+  }
+
   const title = isSelf ? "Your Wall" : (wall?.member.name ?? "Wall");
   const count = wall?.stickies.length ?? 0;
   const profile = wall?.profile ?? null;
@@ -161,7 +167,7 @@ export function Wall({
         subtitle={
           wall && wall.visible ? `${count} note${count === 1 ? "" : "s"}` : undefined
         }
-        onBack={() => navigate("/")}
+        onBack={goBack}
         right={
           <HeaderActions
             theme={theme}

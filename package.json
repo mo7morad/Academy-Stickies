@@ -21,6 +21,8 @@
     "migrate4:remote": "wrangler d1 execute stickies-db --remote --file=./migrations/0004_mentor_stickies.sql",
     "migrate5:local": "wrangler d1 execute stickies-db --local --file=./migrations/0005_feedback.sql",
     "migrate5:remote": "wrangler d1 execute stickies-db --remote --file=./migrations/0005_feedback.sql",
+    "migrate6:local": "wrangler d1 execute stickies-db --local --file=./migrations/0006_mentor_wall_public.sql",
+    "migrate6:remote": "wrangler d1 execute stickies-db --remote --file=./migrations/0006_mentor_wall_public.sql",
     "seed": "tsx scripts/seed.ts",
     "seed:remote": "tsx scripts/seed.ts --remote",
     "cohort": "tsx scripts/build-cohort.ts",
