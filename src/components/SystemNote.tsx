@@ -14,6 +14,7 @@ export function SystemNote() {
   const [dismissed, setDismissed] = useState(
     () => localStorage.getItem(STORAGE_KEY) === "1",
   );
+  const [leaving, setLeaving] = useState(false);
 
   if (dismissed) return null;
 
@@ -25,24 +26,35 @@ export function SystemNote() {
     } catch {
       /* ignore */
     }
-    setDismissed(true);
+    // The unmount waits for the lift-off animation, which reduced-motion
+    // shortens to a tick rather than removing — so it always arrives.
+    setLeaving(true);
   }
 
   return (
-    <div class="system-note">
+    <div
+      class={`system-note${leaving ? " system-note--leaving" : ""}`}
+      role="note"
+      onAnimationEnd={(e) => {
+        if (leaving && e.currentTarget === e.target) setDismissed(true);
+      }}
+    >
       <div class="system-note__icon">
         <Icon name="sparkles" size={24} />
       </div>
       <div class="system-note__content">
+        {/* The trailing emoji are joined with a non-breaking space: on their
+            own they wrap to a line of their own and read as a stray glyph. */}
         <h3>Hey there!</h3>
-        <p>Wishing you all a wonderful and memorable time at the academy! 🌟</p>
+        <p>Wishing you all a wonderful and memorable time at the academy!{"\u00A0🌟"}</p>
         <p>
           Stickies is made to cheer each other on, leave a kind message, or share
           something you’d like others to notice. You never know when a few words of
-          encouragement can brighten someone’s day! 💛
+          encouragement can brighten someone’s day!{"\u00A0💛"}
         </p>
         <p>
-          Have fun, connect with one another, and make the most of your time here! ✨
+          Have fun, connect with one another, and make the most of your time
+          here!{"\u00A0✨"}
         </p>
       </div>
       <button

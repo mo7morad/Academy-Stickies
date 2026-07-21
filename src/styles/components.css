@@ -1453,86 +1453,114 @@
 
 /* ===========================================================================
    System Note Banner
+
+   A sheet of paper taped to the top of the wall, built from the same parts as
+   a sticky: pencil border, hard offset shadow, a little off-square. The paper
+   palette is deliberately theme-independent (as .sticky is) — paper is paper
+   in both themes, and dark ink on it stays legible without a second colour set.
 =========================================================================== */
 .system-note {
-  background: linear-gradient(135deg, rgba(255, 222, 122, 0.95), rgba(255, 194, 71, 0.95));
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  border-radius: 16px;
-  padding: var(--s5);
-  margin-bottom: var(--s6);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08), inset 0 2px 0 rgba(255, 255, 255, 0.9);
+  position: relative;
   display: flex;
   gap: var(--s4);
   align-items: flex-start;
-  color: #1a1a1a;
-  position: relative;
-  overflow: hidden;
-  animation: popInBanner 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  margin: var(--s3) 0 var(--s6);
+  padding: var(--s5);
+  color: var(--sticky-ink);
+  background: linear-gradient(160deg, var(--sticky-yellow-top), var(--sticky-yellow-bot));
+  border: 2px solid var(--border);
+  border-radius: 12px 5px 10px 6px / 6px 10px 5px 12px;
+  box-shadow: var(--shadow-md);
+  transform: rotate(-0.4deg);
+  transition: transform 240ms var(--ease-out), box-shadow 240ms var(--ease-out);
+  animation: note-settle 420ms var(--ease-out) both;
+}
+@media (hover: hover) and (pointer: fine) {
+  .system-note:hover {
+    transform: rotate(0deg) translate(-2px, -2px);
+    box-shadow: var(--shadow-lg);
+  }
 }
 
-.system-note:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12), inset 0 2px 0 rgba(255, 255, 255, 0.9);
-}
-
-:root[data-theme="dark"] .system-note {
-  background: linear-gradient(135deg, rgba(60, 48, 14, 0.8), rgba(40, 31, 8, 0.8));
-  border-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  color: #fff;
-}
-
-:root[data-theme="dark"] .system-note:hover {
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-}
-
-.system-note::before {
+/* Two strips of tape, one per top corner — the note is pinned up, not floating. */
+.system-note::before,
+.system-note::after {
   content: '';
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: radial-gradient(circle at top right, rgba(255,255,255,0.4) 0%, transparent 60%);
+  top: -11px;
+  width: 66px;
+  height: 20px;
+  background: rgba(45, 45, 45, 0.14);
+  border: 1px solid rgba(45, 45, 45, 0.1);
   pointer-events: none;
 }
-:root[data-theme="dark"] .system-note::before {
-  background: radial-gradient(circle at top right, rgba(255,255,255,0.1) 0%, transparent 60%);
+.system-note::before {
+  left: 26px;
+  transform: rotate(-3deg);
+}
+.system-note::after {
+  right: 26px;
+  transform: rotate(2.5deg);
 }
 
 .system-note__icon {
   flex-shrink: 0;
-  background: var(--brand);
-  color: white;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
+  width: 46px;
+  height: 46px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  color: var(--brand-ink);
+  background: var(--brand);
+  border: 2px solid var(--sticky-ink);
+  border-radius: 50%;
+  box-shadow: 2px 2px 0 0 var(--sticky-ink);
+  transform: rotate(-6deg);
 }
 
 .system-note__content {
   flex: 1;
-  position: relative;
-  z-index: 1;
+  min-width: 0;
   /* Clear of the dismiss button in its corner. */
   padding-right: var(--s6);
+}
+
+.system-note__content h3 {
+  margin: 0 0 var(--s3);
+  padding-bottom: var(--s2);
+  font-family: var(--font-heading);
+  font-size: var(--t-title);
+  font-weight: 700;
+  line-height: 1.15;
+  /* The pencil rule underlines the greeting, so it has to stop where the
+     words do rather than run the width of the paper. */
+  width: fit-content;
+  max-width: 100%;
+  border-bottom: 2px dashed rgba(45, 45, 45, 0.25);
+}
+
+.system-note__content p {
+  /* Prose, not layout: hold the measure even when the column is 800px wide. */
+  max-width: 60ch;
+  margin: 0 0 var(--s3);
+  font-size: var(--t-body);
+  line-height: 1.65;
+}
+.system-note__content p:last-child {
+  margin-bottom: 0;
 }
 
 .system-note__dismiss {
   position: absolute;
   top: var(--s3);
   right: var(--s3);
-  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  color: inherit;
+  color: var(--sticky-ink);
   opacity: 0.55;
   transition: opacity 160ms var(--ease-out), background 160ms var(--ease-out),
     transform 120ms var(--ease-out);
@@ -1543,31 +1571,52 @@
 @media (hover: hover) and (pointer: fine) {
   .system-note__dismiss:hover {
     opacity: 1;
-    background: rgba(0, 0, 0, 0.1);
+    background: rgba(45, 45, 45, 0.12);
   }
 }
-:root[data-theme="dark"] .system-note__dismiss:hover {
-  background: rgba(255, 255, 255, 0.12);
+
+@media (max-width: 560px) {
+  .system-note {
+    gap: var(--s3);
+    padding: var(--s4);
+  }
+  .system-note__icon {
+    width: 38px;
+    height: 38px;
+  }
+  .system-note__content h3 {
+    font-size: var(--t-heading);
+  }
+  .system-note__content p {
+    font-size: var(--t-sub);
+  }
+  .system-note::before { left: 16px; }
+  .system-note::after { right: 16px; }
 }
 
-.system-note__content h3 {
-  margin: 0 0 var(--s2);
-  font-size: var(--t-heading);
-  font-weight: 800;
-  letter-spacing: -0.02em;
+/* Dismissal is a decision the reader made — let the paper leave the wall
+   rather than blink out of existence. */
+.system-note--leaving {
+  animation: note-lift 260ms var(--ease-in-out) forwards;
+  pointer-events: none;
 }
 
-.system-note__content p {
-  margin: 0 0 var(--s2);
-  line-height: 1.6;
-  font-size: 1.05rem;
-}
-.system-note__content p:last-child {
-  margin-bottom: 0;
+@keyframes note-settle {
+  from { opacity: 0; transform: rotate(1.5deg) translateY(-14px) scale(0.98); }
+  to   { opacity: 1; transform: rotate(-0.4deg) translateY(0) scale(1); }
 }
 
-@keyframes popInBanner {
-  0% { opacity: 0; transform: translateY(-20px) scale(0.98); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
+@keyframes note-lift {
+  to { opacity: 0; transform: rotate(-3deg) translateY(-10px) scale(0.97); }
+}
+
+/* The leaving animation is what unmounts the note, so it must still run —
+   just fast enough to read as instant. */
+@media (prefers-reduced-motion: reduce) {
+  .system-note { animation: none; }
+  .system-note--leaving { animation-duration: 1ms; }
+  @media (hover: hover) and (pointer: fine) {
+    .system-note:hover { transform: rotate(-0.4deg); }
+  }
 }
 

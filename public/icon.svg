@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Academy Stickies">
+  <title>Academy Stickies</title>
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="0.35" y2="1">
+      <stop offset="0" stop-color="#fff9c4"/>
+      <stop offset="1" stop-color="#ffe97a"/>
+    </linearGradient>
+  </defs>
+
+  <!-- The pencil-black board the note is taped to. -->
+  <rect width="512" height="512" fill="#2d2d2d"/>
+
+  <!-- Kept inside the central 80% so a circular home-screen mask never clips
+       a corner of the paper. -->
+  <g transform="rotate(-4.5 256 256) translate(30.72 30.72) scale(0.88)">
+    <!-- Hard offset shadow, the same trick every surface in the app uses. -->
+    <path d="M104 112C180 104 330 100 404 110C412 190 414 320 406 402C320 412 180 414 106 404C98 320 96 190 104 112Z"
+          fill="#000" opacity="0.45" transform="translate(16 18)"/>
+    <path d="M104 112C180 104 330 100 404 110C412 190 414 320 406 402C320 412 180 414 106 404C98 320 96 190 104 112Z"
+          fill="url(#paper)" stroke="#2d2d2d" stroke-width="11" stroke-linejoin="round"/>
+
+    <!-- A strip of tape across the top edge. -->
+    <g transform="rotate(-5 256 104)">
+      <rect x="196" y="80" width="122" height="40" fill="#fdfbf7" opacity="0.62"/>
+      <rect x="196" y="80" width="122" height="40" fill="none" stroke="#2d2d2d" stroke-width="3" opacity="0.28"/>
+    </g>
+
+    <!-- Drawn in marker red: the kind word someone left you. -->
+    <path d="M256 322C198 277 168 246 168 215C168 190 188 171 213 171C232 171 248 182 256 197C264 182 280 171 299 171C324 171 344 190 344 215C344 246 314 277 256 322Z"
+          fill="#d32f2f" stroke="#2d2d2d" stroke-width="11" stroke-linejoin="round"/>
+
+    <!-- Two ruled lines, so it still reads as a written note. -->
+    <g stroke="#2d2d2d" stroke-width="12" stroke-linecap="round" opacity="0.35" fill="none">
+      <path d="M150 356C210 350 300 350 362 355"/>
+      <path d="M150 390C190 385 250 385 292 389"/>
+    </g>
+  </g>
+</svg>

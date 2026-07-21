@@ -12,7 +12,14 @@
     <meta name="theme-color" content="#1e1e1e" media="(prefers-color-scheme: dark)" />
     <meta name="color-scheme" content="light dark" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <!-- The home-screen label. Without it iOS uses <title>, which wraps. -->
+    <meta name="apple-mobile-web-app-title" content="Stickies" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="description" content="A private board of sticky notes between academy members." />
+    <!-- SVG for tabs that take it; iOS only ever reads the PNG. -->
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <!-- Fonts are self-hosted (see src/styles/fonts.css); preload just the two
          latin subsets that every first paint needs. -->
     <link
