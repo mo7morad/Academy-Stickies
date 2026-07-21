@@ -8,7 +8,7 @@ import { getMembers } from "../api";
 const CREDITS = [
   { label: "John", fullName: "Muhammadjonov Javohir" },
   { label: "Ken", fullName: "Kenneth Muyoyo Omondi" },
-  { label: "Morad", fullName: "Mohamed Essam Ahmed Morad" },
+  { label: "Morad", fullName: "Mohamed Essam Ahmed Morad Mohamed Morad" },
 ];
 
 /** The credits can't change mid-session, so the footer reads the roster once
@@ -34,13 +34,31 @@ function useRoster(): RosterMember[] | null {
   return members;
 }
 
+/** Exact first, then every-name-part. A roster entry that carries extra given
+ *  names ("Mohamed Essam Ahmed Morad Mohamed Morad") still resolves from the
+ *  shorter form above — dropping a name part used to silently flatten a credit
+ *  into plain text. Ambiguous matches resolve to nothing rather than the wrong
+ *  person's wall. */
+function findMember(
+  members: RosterMember[],
+  fullName: string,
+): RosterMember | null {
+  const parts = fullName.toLowerCase().split(/\s+/).filter(Boolean);
+  const exact = members.find((m) => m.name.toLowerCase() === parts.join(" "));
+  if (exact) return exact;
+
+  const loose = members.filter((m) => {
+    const name = m.name.toLowerCase().split(/\s+/);
+    return parts.every((p) => name.includes(p));
+  });
+  return loose.length === 1 ? loose[0] : null;
+}
+
 export function AppFooter() {
   const members = useRoster();
 
   const hrefFor = (fullName: string): string | null => {
-    const hit = members?.find(
-      (m) => m.name.toLowerCase() === fullName.toLowerCase(),
-    );
+    const hit = members && findMember(members, fullName);
     if (!hit) return null;
     return hit.isSelf ? "#/me" : `#/m/${hit.id}`;
   };

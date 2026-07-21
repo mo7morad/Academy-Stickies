@@ -6,6 +6,7 @@ import { Avatar } from "../components/Avatar";
 import { HeaderActions } from "../components/HeaderActions";
 import { Icon } from "../components/Icon";
 import { Nav } from "../components/Nav";
+import { Pager } from "../components/Pager";
 import { ProfileBody } from "../components/ProfileBody";
 import { Sheet } from "../components/Sheet";
 import { StickyNote } from "../components/StickyNote";
@@ -46,9 +47,13 @@ export function Wall({
   const [wall, setWall] = useState<WallResponse | null>(null);
   const [uploading, setUploading] = useState(false);
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
   const [showProfile, setShowProfile] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const notesRef = useRef<HTMLElement>(null);
   const isSelf = memberId === me.id;
+  /** Six rows of two on desktop, twelve stacked on a phone. */
+  const PAGE_SIZE = 12;
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -61,6 +66,26 @@ export function Wall({
     );
   }, [wall, query]);
 
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  // Deleting the last note on the last page would otherwise strand the reader
+  // on an empty one.
+  const safePage = Math.min(page, Math.max(1, totalPages));
+  const visible = useMemo(
+    () => filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE),
+    [filtered, safePage],
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [query]);
+
+  /** Paging from the bottom pager should land on the first note, not wherever
+   *  the old page's scroll position happened to be. */
+  function goToPage(next: number) {
+    setPage(next);
+    notesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   async function load() {
     try {
       setWall(await getWall(memberId));
@@ -72,6 +97,7 @@ export function Wall({
   useEffect(() => {
     setWall(null);
     setQuery("");
+    setPage(1);
     setShowProfile(false);
     load();
   }, [memberId, refreshSignal]);
@@ -272,7 +298,7 @@ export function Wall({
                 </section>
               )}
 
-              <section class="wall-notes">
+              <section class="wall-notes" ref={notesRef}>
                 <SystemNote />
 
                 {/* The empty and private states name themselves, so the column
@@ -323,16 +349,31 @@ export function Wall({
                         <p>Nothing matched “{query}”.</p>
                       </div>
                     ) : (
-                      <div class="wall">
-                        {filtered.map((s) => (
-                          <StickyNote
-                            key={s.id}
-                            sticky={s}
-                            canDelete={isSelf}
-                            onDelete={removeSticky}
-                          />
-                        ))}
-                      </div>
+                      <>
+                        {totalPages > 1 && (
+                          <div class="wall-range" aria-live="polite">
+                            Showing {(safePage - 1) * PAGE_SIZE + 1}–
+                            {Math.min(safePage * PAGE_SIZE, filtered.length)} of{" "}
+                            {filtered.length}
+                          </div>
+                        )}
+                        <div class="wall">
+                          {visible.map((s) => (
+                            <StickyNote
+                              key={s.id}
+                              sticky={s}
+                              canDelete={isSelf}
+                              onDelete={removeSticky}
+                            />
+                          ))}
+                        </div>
+                        <Pager
+                          page={safePage}
+                          totalPages={totalPages}
+                          label="Sticky pages"
+                          onPage={goToPage}
+                        />
+                      </>
                     )}
                   </>
                 )}

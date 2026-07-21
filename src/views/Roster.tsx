@@ -5,47 +5,10 @@ import { getMembers } from "../api";
 import { Avatar } from "../components/Avatar";
 import { Segmented, Spinner } from "../components/controls";
 import { Icon } from "../components/Icon";
+import { Pager } from "../components/Pager";
 import { useToast } from "../toast";
 
 type SessionFilter = "all" | "AM" | "PM";
-
-/**
- * Rendered above and below the grid so paging from the bottom of a long page
- * doesn't mean scrolling back up. The range count in .roster-bar is the one
- * live region, so neither copy announces.
- */
-function Pager({
-  page,
-  totalPages,
-  onPage,
-}: {
-  page: number;
-  totalPages: number;
-  onPage: (page: number) => void;
-}) {
-  if (totalPages <= 1) return null;
-  return (
-    <nav class="pagination" aria-label="Roster pages">
-      <button
-        class="btn btn--tinted"
-        disabled={page === 1}
-        onClick={() => onPage(Math.max(1, page - 1))}
-      >
-        &larr; Prev
-      </button>
-      <span class="pagination__status">
-        Page {page} of {totalPages}
-      </span>
-      <button
-        class="btn btn--tinted"
-        disabled={page === totalPages}
-        onClick={() => onPage(Math.min(totalPages, page + 1))}
-      >
-        Next &rarr;
-      </button>
-    </nav>
-  );
-}
 
 export function Roster({
   refreshSignal,
@@ -158,7 +121,12 @@ export function Roster({
               {rangeStart}–{rangeEnd} of {filtered?.length}{" "}
               {filtered?.length === 1 ? "person" : "people"}
             </div>
-            <Pager page={page} totalPages={totalPages} onPage={setPage} />
+            <Pager
+              page={page}
+              totalPages={totalPages}
+              label="Roster pages"
+              onPage={setPage}
+            />
           </div>
           <div class="roster">
             {visibleMembers?.map((m, i) => {
@@ -194,7 +162,12 @@ export function Roster({
               );
             })}
           </div>
-          <Pager page={page} totalPages={totalPages} onPage={setPage} />
+          <Pager
+            page={page}
+            totalPages={totalPages}
+            label="Roster pages"
+            onPage={setPage}
+          />
         </>
       )}
 

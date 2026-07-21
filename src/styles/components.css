@@ -816,15 +816,23 @@
 /* ===========================================================================
    Sticky notes
 =========================================================================== */
+/* A grid, not `columns`. Multi-column fragmentation and these cards don't
+   mix: rotated, break-inside-avoid cards get laid out at overlapping offsets,
+   so a wall with more than one note rendered as a pile. One grid cell per
+   note can't stack. */
 .wall {
-  columns: 1;
-  column-gap: var(--s4);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  /* Row gap runs wider than column gap: it also has to clear the tape, which
+     hangs 8px above each card. */
+  gap: var(--s6) var(--s4);
+  align-items: start;
   padding-top: var(--s3);
 }
 /* Two, at every width that fits them. Above 1024px the notes sit in the right
    half of .wall-body, which is ~810px at --page-max — still two. */
 @media (min-width: 640px) {
-  .wall { columns: 2; }
+  .wall { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (min-width: 900px) {
   .hidden-on-desktop {
@@ -839,10 +847,6 @@
 
 .sticky {
   position: relative;
-  break-inside: avoid;
-  display: inline-block;
-  width: 100%;
-  margin-bottom: var(--s4);
   border: 2px solid var(--border);
   border-radius: var(--r-wobbly-sm);
   color: var(--sticky-ink);
@@ -1264,6 +1268,14 @@
 }
 .wall-about .prose {
   max-width: 62ch;
+}
+/* Only rendered once the notes span more than one page, where "12 of 40"
+   answers the question the pager below raises. */
+.wall-range {
+  font-size: var(--t-small);
+  font-weight: 600;
+  color: var(--ink-2);
+  margin-top: var(--s2);
 }
 .wall-col__title {
   font-family: var(--font-heading);

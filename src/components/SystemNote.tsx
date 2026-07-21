@@ -4,7 +4,7 @@ export function SystemNote() {
   return (
     <div class="system-note">
       <div class="system-note__icon">
-        <Icon name="star" size={24} />
+        <Icon name="sparkles" size={24} />
       </div>
       <div class="system-note__content">
         <h3>Hey there!</h3>
