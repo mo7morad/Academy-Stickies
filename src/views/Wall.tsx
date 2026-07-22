@@ -323,14 +323,35 @@ export function Wall({
                 )}
 
                 {!wall.visible ? (
-                  <div class="empty">
-                    <div class="empty__emoji">🔒</div>
-                    <div class="empty__title">This wall is private</div>
-                    <p>
-                      {wall.member.name} hasn't shared their wall yet — but you can
-                      still read their profile and leave them a note.
-                    </p>
-                  </div>
+                  <>
+                    <div class="empty">
+                      <div class="empty__emoji">🔒</div>
+                      <div class="empty__title">This wall is private</div>
+                      <p>
+                        {wall.member.name} hasn't shared their wall yet — but you
+                        can still read their profile and leave them a note.
+                      </p>
+                    </div>
+                    {/* The wall is hidden, but a note you gave is yours to see —
+                        the server returns only your own for a private wall. */}
+                    {wall.stickies.length > 0 && (
+                      <>
+                        <h2 class="wall-col__title">
+                          Note{wall.stickies.length === 1 ? "" : "s"} you left{" "}
+                          {wall.member.name.split(" ")[0]}
+                        </h2>
+                        <div class="wall">
+                          {wall.stickies.map((s) => (
+                            <StickyNote
+                              key={s.id}
+                              sticky={s}
+                              subject={wall.member.name.split(" ")[0]}
+                            />
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </>
                 ) : count === 0 ? (
                   <div class="empty">
                     <div class="empty__emoji">🗒️</div>

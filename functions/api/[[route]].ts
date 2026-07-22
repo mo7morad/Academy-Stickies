@@ -561,21 +561,9 @@ app.get("/members/:id", requireSession, async (c) => {
       }
     : null;
 
-  if (!visible) {
-    const res: WallResponse = {
-      member: rosterMember,
-      isSelf,
-      isMentor,
-      visible: false,
-      stickies: [],
-      profile,
-    };
-    return c.json(res);
-  }
-
   const stickyRows = (stickyRes.results ?? []) as unknown as StickyRow[];
 
-  const stickies: Sticky[] = stickyRows.map((r) => ({
+  const toSticky = (r: StickyRow): Sticky => ({
     id: r.id,
     authorName:
       r.is_anonymous === 1 ? (r.anon_name ?? "Anonymous") : r.author_name,
@@ -589,7 +577,26 @@ app.get("/members/:id", requireSession, async (c) => {
       : "yellow",
     photoUrl: r.photo_key ? `/api/media/${r.photo_key}` : null,
     createdAt: r.created_at,
-  }));
+  });
+
+  // A private wall hides the cohort's notes — but not the ones the viewer wrote
+  // themselves. A note you gave someone is yours to keep seeing even after they
+  // make their wall private. Anonymous notes store no author_id (anonymity is
+  // guaranteed by storage), so only signed notes can be traced back to you.
+  if (!visible) {
+    const mine = stickyRows.filter((r) => r.author_id === meId).map(toSticky);
+    const res: WallResponse = {
+      member: rosterMember,
+      isSelf,
+      isMentor,
+      visible: false,
+      stickies: mine,
+      profile,
+    };
+    return c.json(res);
+  }
+
+  const stickies: Sticky[] = stickyRows.map(toSticky);
 
   const res: WallResponse = {
     member: rosterMember,

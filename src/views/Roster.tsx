@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { stripTags } from "../../shared/text";
 import type { RosterMember } from "../../shared/types";
 import { getMembers, invalidateMembers } from "../api";
@@ -10,6 +10,19 @@ import { useToast } from "../toast";
 
 type SessionFilter = "all" | "AM" | "PM";
 
+/**
+ * Roster browsing state, held at module scope so returning from a profile lands
+ * back where you were — same page, same filters, same scroll — instead of
+ * snapping to the top of page one. It resets on a full reload; this only has to
+ * bridge in-app navigation, where the component unmounts and remounts.
+ */
+const view: {
+  page: number;
+  query: string;
+  session: SessionFilter;
+  scrollY: number;
+} = { page: 1, query: "", session: "all", scrollY: 0 };
+
 export function Roster({
   refreshSignal,
   onGive,
@@ -19,10 +32,33 @@ export function Roster({
 }) {
   const toast = useToast();
   const [members, setMembers] = useState<RosterMember[] | null>(null);
-  const [query, setQuery] = useState("");
-  const [session, setSession] = useState<SessionFilter>("all");
-  const [page, setPage] = useState(1);
+  const [query, setQuery] = useState(view.query);
+  const [session, setSession] = useState<SessionFilter>(view.session);
+  const [page, setPage] = useState(view.page);
   const PAGE_SIZE = 24;
+
+  // Mirror the browsing state so the next mount can restore it, and stash the
+  // scroll position on the way out.
+  useEffect(() => {
+    view.page = page;
+    view.query = query;
+    view.session = session;
+  }, [page, query, session]);
+
+  useEffect(() => {
+    return () => {
+      view.scrollY = window.scrollY;
+    };
+  }, []);
+
+  // Restore scroll once the grid has actually painted, and only the first time.
+  const restored = useRef(false);
+  useEffect(() => {
+    if (members && !restored.current) {
+      restored.current = true;
+      if (view.scrollY > 0) window.scrollTo(0, view.scrollY);
+    }
+  }, [members]);
 
   useEffect(() => {
     let alive = true;
@@ -60,7 +96,14 @@ export function Roster({
     [members],
   );
 
+  // A real filter change starts over on page one, but the restored page must
+  // survive the first render — otherwise coming back always lands on page one.
+  const firstFilter = useRef(true);
   useEffect(() => {
+    if (firstFilter.current) {
+      firstFilter.current = false;
+      return;
+    }
     setPage(1);
   }, [query, session]);
 
