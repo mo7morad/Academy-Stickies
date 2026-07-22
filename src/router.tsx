@@ -1,13 +1,14 @@
 import { useEffect, useState } from "preact/hooks";
 
 export interface Route {
-  name: "roster" | "wall" | "me" | "mentors";
+  name: "roster" | "wall" | "me" | "mentors" | "edit";
   id?: string;
 }
 
 function parse(hash: string): Route {
   const clean = hash.replace(/^#/, "");
   if (clean === "" || clean === "/") return { name: "roster" };
+  if (clean === "/me/edit") return { name: "edit" };
   if (clean === "/me") return { name: "me" };
   if (clean === "/mentors") return { name: "mentors" };
   const m = clean.match(/^\/m\/([^/?]+)/);

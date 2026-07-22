@@ -22,6 +22,7 @@ import {
   validateImage,
 } from "../../lib/media";
 import { pseudonymFor } from "../../lib/pseudonym";
+import { sanitizeProfileInput } from "../../shared/profile";
 import { MAX_FIELD_LEN, STICKY_COLORS } from "../../shared/types";
 import type {
   Me,
@@ -59,6 +60,7 @@ interface MemberRow {
   last_login_at: number | null;
   photo_key: string | null; // joined from profiles — the cohort photo
   thumb_key: string | null;
+  session: string | null; // joined from profiles — AM/PM
 }
 
 type Variables = { member: MemberRow; memberId: string };
@@ -158,7 +160,7 @@ async function requireAuth(c: AppContext, next: Next) {
   if (!memberId) return c.json({ error: "unauthorized" }, 401);
 
   const member = await c.env.DB.prepare(
-    `SELECT m.*, p.photo_key, p.thumb_key
+    `SELECT m.*, p.photo_key, p.thumb_key, p.session
      FROM members m LEFT JOIN profiles p ON p.member_id = m.id
      WHERE m.id = ?`,
   )
@@ -290,6 +292,72 @@ app.post("/me/avatar", requireAuth, async (c) => {
     .run();
 
   return c.json({ avatarUrl: `/api/media/${key}` });
+});
+
+/** A slug for a member who has no profile row yet (on the roster but absent
+ *  from the Cohort/ import). Matches the import's fallback: whitespace → "_",
+ *  then anything unsafe for a key stripped. profiles.slug is NOT NULL. */
+function slugFromName(name: string): string {
+  const slug = name
+    .trim()
+    .replace(/\s+/g, "_")
+    .replace(/[^A-Za-z0-9_-]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return slug || "member";
+}
+
+// Members edit their own profile — name, tagline, intro, sections, links. The
+// AM/PM session and cohort photo are roster facts, not self-description, so the
+// upsert leaves them (and the slug) alone. Sanitizing is the server's job: it
+// is the authority regardless of what the editor sent.
+app.put("/me/profile", requireAuth, async (c) => {
+  const member = c.get("member");
+  const raw = await c.req.json().catch(() => ({}));
+  const result = sanitizeProfileInput(raw);
+  if (!result.ok) return c.json({ error: result.error }, 400);
+  const { name, tagline, intro, sections, links } = result.value;
+
+  const now = Date.now();
+  const sectionsJson = JSON.stringify(sections);
+  const linksJson = JSON.stringify(links);
+
+  await c.env.DB.batch([
+    c.env.DB.prepare("UPDATE members SET name = ? WHERE id = ?").bind(
+      name,
+      member.id,
+    ),
+    // INSERT fires only for a member with no profile row; the ON CONFLICT branch
+    // updates the prose and stamps edited_at (which stops a later cohort
+    // re-import from overwriting these words) while leaving slug/session/photo.
+    c.env.DB.prepare(
+      `INSERT INTO profiles
+         (member_id, slug, tagline, intro, sections, links, updated_at, edited_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(member_id) DO UPDATE SET
+         tagline = excluded.tagline, intro = excluded.intro,
+         sections = excluded.sections, links = excluded.links,
+         updated_at = excluded.updated_at, edited_at = excluded.edited_at`,
+    ).bind(
+      member.id,
+      slugFromName(name),
+      tagline,
+      intro,
+      sectionsJson,
+      linksJson,
+      now,
+      now,
+    ),
+  ]);
+
+  const me: Me = { ...toMe(member), name };
+  const profile: Profile = {
+    session: member.session ?? null,
+    tagline,
+    intro,
+    sections,
+    links,
+  };
+  return c.json({ me, profile });
 });
 
 // ---------------------------------------------------------------------------

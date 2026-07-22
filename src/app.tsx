@@ -9,6 +9,7 @@ import { Nav } from "./components/Nav";
 import { Sheet } from "./components/Sheet";
 import { Spinner } from "./components/controls";
 import { navigate, useHashRoute } from "./router";
+import { EditProfile } from "./views/EditProfile";
 import { GiveSticky } from "./views/GiveSticky";
 import { Login } from "./views/Login";
 import { Mentors } from "./views/Mentors";
@@ -130,6 +131,19 @@ export function App() {
           <Roster refreshSignal={refresh} onGive={openGive} />
         )}
       </>
+    );
+  } else if (route.name === "edit") {
+    content = (
+      <EditProfile
+        me={me}
+        theme={theme}
+        onToggleTheme={toggle}
+        onMeChange={setMe}
+        onSaved={() => {
+          setRefresh((r) => r + 1);
+          navigate("/me");
+        }}
+      />
     );
   } else {
     const memberId = route.name === "me" ? me.id : (route.id ?? me.id);

@@ -13,6 +13,9 @@ Guidelines (SF typography, translucent materials, light/dark, grouped forms).
   academy address; a signed, HttpOnly session cookie keeps them logged in.
 - **Recipient-controlled walls** — private by default; each member can opt to make
   their wall visible to the academy.
+- **Editable profiles** — each member can rewrite their own profile (name, tagline,
+  intro, free-form sections and links) from their wall; a later cohort re-import
+  leaves edited profiles untouched.
 - **Signed or anonymous** stickies — anonymous notes store *no* author id, so
   anonymity is guaranteed by storage, not just hidden in the UI.
 - **Avatars + photos** — profile photos and optional per-sticky images, stored in R2.
@@ -48,9 +51,11 @@ cp .dev.vars.example .dev.vars      # then fill in SESSION_SECRET (openssl rand 
 npx wrangler d1 create stickies-db          # paste database_id into wrangler.toml
 npx wrangler r2 bucket create stickies-media
 
-# Apply the schema:
+# Apply the schema, then the numbered migrations under migrations/ in order
+# (migrate1 … migrate7) — each adds a later feature's columns/tables:
 npm run db:local                    # local dev database
 npm run db:remote                   # deployed database
+npm run migrate7:local              # …through migrate7 (profile edits); :remote for prod
 
 # Add your people to seed/roster.json, then load them + generate links:
 npm run seed                        # local   (npm run seed:remote for prod)

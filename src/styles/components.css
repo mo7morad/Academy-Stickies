@@ -1691,3 +1691,94 @@
   }
 }
 
+/* ===========================================================================
+   Profile editor
+=========================================================================== */
+.editor {
+  padding-bottom: var(--s6);
+}
+.editor__field {
+  display: block;
+  margin-bottom: var(--s4);
+}
+.editor__label {
+  display: block;
+  margin-bottom: var(--s2);
+  padding-left: var(--s1);
+  font-size: var(--t-small);
+  font-weight: 700;
+  color: var(--ink-3);
+}
+.editor__hint {
+  color: var(--ink-3);
+  font-size: var(--t-tiny);
+  padding: var(--s2) var(--s1) var(--s5);
+}
+/* "Sections"/"Links" headers carry an Add button on the right. */
+.editor__group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.editor__empty {
+  color: var(--ink-3);
+  font-size: var(--t-small);
+  padding: var(--s2) var(--s1) var(--s4);
+}
+
+.editor__section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-wobbly-1);
+  box-shadow: var(--shadow-sm);
+  padding: var(--s4);
+  margin-bottom: var(--s4);
+}
+.editor__section-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+}
+.editor__section-title {
+  flex: 1;
+  min-width: 0;
+}
+.editor__section-tools {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+.icon-btn:disabled {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.editor__link-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin-bottom: var(--s3);
+}
+.editor__link-label {
+  flex: 0 1 34%;
+  min-width: 0;
+}
+.editor__link-url {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* A true-to-life preview: the same <ProfileBody> the cohort reads, framed so
+   it reads as a panel rather than part of the form. */
+.editor__preview {
+  background: var(--surface-2);
+  border: 1px dashed var(--border);
+  border-radius: var(--r-wobbly-1);
+  padding: var(--s5) var(--s4);
+  margin-bottom: var(--s5);
+}
+.editor__preview .profile {
+  margin-top: 0;
+}
+

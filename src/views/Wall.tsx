@@ -254,6 +254,15 @@ export function Wall({
                       {isSelf ? "Your profile" : "Read profile"}
                     </button>
                   )}
+                  {isSelf && (
+                    <button
+                      class="btn btn--tinted"
+                      onClick={() => navigate("/me/edit")}
+                    >
+                      <Icon name="pencil" size={16} />
+                      {profile ? "Edit profile" : "Set up your profile"}
+                    </button>
+                  )}
                   {!isSelf && (
                     <button
                       class="btn btn--filled"

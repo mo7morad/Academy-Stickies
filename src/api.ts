@@ -1,7 +1,9 @@
+import type { ProfileInput } from "../shared/profile";
 import type {
   CreateStickyResult,
   Me,
   Mentor,
+  Profile,
   RosterMember,
   WallResponse,
 } from "../shared/types";
@@ -136,6 +138,24 @@ export async function setWallPublic(wallPublic: boolean): Promise<Me> {
     body: JSON.stringify({ wallPublic }),
   });
   return parse<Me>(res);
+}
+
+/**
+ * Save the current member's own profile. Invalidates the roster cache on
+ * success: name and tagline both show on the roster card, and the grid + footer
+ * credits would otherwise keep serving the stale ones until a reload.
+ */
+export async function saveProfile(
+  input: ProfileInput,
+): Promise<{ me: Me; profile: Profile }> {
+  const res = await fetch("/api/me/profile", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const data = await parse<{ me: Me; profile: Profile }>(res);
+  invalidateMembers();
+  return data;
 }
 
 export async function uploadAvatar(file: Blob): Promise<{ avatarUrl: string }> {

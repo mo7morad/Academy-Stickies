@@ -582,7 +582,10 @@ function main() {
         `ON CONFLICT(member_id) DO UPDATE SET slug=excluded.slug, session=excluded.session, ` +
         `tagline=excluded.tagline, photo_key=excluded.photo_key, thumb_key=excluded.thumb_key, ` +
         `intro=excluded.intro, sections=excluded.sections, links=excluded.links, ` +
-        `updated_at=excluded.updated_at;`,
+        `updated_at=excluded.updated_at\n` +
+        // A member who has edited their own profile in-app has edited_at set;
+        // leave their words alone. Only untouched imports refresh from Cohort/.
+        `WHERE profiles.edited_at IS NULL;`,
     );
   }
 
