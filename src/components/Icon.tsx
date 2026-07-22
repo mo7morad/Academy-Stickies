@@ -11,6 +11,7 @@ export type IconName =
   | "sun"
   | "moon"
   | "logout"
+  | "bell"
   | "person"
   | "check"
   | "paperplane"
@@ -58,6 +59,12 @@ const PATHS: Record<IconName, JSX.Element> = {
     <>
       <path d="M14 7V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-2" />
       <path d="M10 12h10M17 9l3 3-3 3" />
+    </>
+  ),
+  bell: (
+    <>
+      <path d="M6 9a6 6 0 0 1 12 0c0 5 1.5 6.5 2.5 7.5H3.5C4.5 15.5 6 14 6 9z" />
+      <path d="M10 20a2 2 0 0 0 4 0" />
     </>
   ),
   person: (

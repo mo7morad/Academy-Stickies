@@ -52,10 +52,10 @@ npx wrangler d1 create stickies-db          # paste database_id into wrangler.to
 npx wrangler r2 bucket create stickies-media
 
 # Apply the schema, then the numbered migrations under migrations/ in order
-# (migrate1 … migrate7) — each adds a later feature's columns/tables:
+# (migrate1 … migrate9) — each adds a later feature's columns/tables:
 npm run db:local                    # local dev database
 npm run db:remote                   # deployed database
-npm run migrate7:local              # …through migrate7 (profile edits); :remote for prod
+npm run migrate9:local              # …through migrate9 (note notifications); :remote for prod
 
 # Add your people to seed/roster.json, then load them + generate links:
 npm run seed                        # local   (npm run seed:remote for prod)

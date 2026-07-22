@@ -169,7 +169,13 @@ export function EditProfile({
       <Nav
         title="Edit Profile"
         onBack={goBack}
-        right={<HeaderActions theme={theme} onToggleTheme={onToggleTheme} />}
+        right={
+          <HeaderActions
+            theme={theme}
+            onToggleTheme={onToggleTheme}
+            unreadCount={me.unreadCount}
+          />
+        }
       />
       <main class="page">
         {loading ? (

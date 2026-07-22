@@ -83,6 +83,25 @@ export function App() {
       .catch(() => setMe(null));
   }, []);
 
+  // A tab left open won't notice notes that land while it's in the background.
+  // Re-reading /me when the page comes back into view refreshes the unread
+  // count (and the rest of Me) so the notification dot stays honest without a
+  // reload. Only ever upgrades an existing session — never forces a sign-out.
+  useEffect(() => {
+    function refresh() {
+      if (document.visibilityState !== "visible") return;
+      getMe()
+        .then((m) => m && setMe(m))
+        .catch(() => {});
+    }
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, []);
+
   const openGive = useCallback((recipient?: string) => {
     setGive({ open: true, recipient });
   }, []);
@@ -121,7 +140,12 @@ export function App() {
           title="Academy"
           subtitle={onMentors ? "Our mentors" : "Sticky notes between us"}
           right={
-            <HeaderActions theme={theme} onToggleTheme={toggle} onLogout={logout} />
+            <HeaderActions
+              theme={theme}
+              onToggleTheme={toggle}
+              onLogout={logout}
+              unreadCount={me.unreadCount}
+            />
           }
         />
         <DirectoryTabs active={route.name} />

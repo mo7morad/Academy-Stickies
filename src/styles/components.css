@@ -284,6 +284,41 @@
   }
 }
 
+/* The bell carries the unread-note count, so its badge has to ride the corner. */
+.icon-btn--bell {
+  position: relative;
+  overflow: visible;
+}
+/* iOS-style red count badge. The whole app is red-marker themed, so a solid
+   surface ring keeps the badge legible even when it lands over brand-red. */
+.notif-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--brand-ink);
+  background: var(--brand);
+  border: 2px solid var(--surface);
+  border-radius: var(--r-pill);
+  pointer-events: none;
+  animation: pop-in 240ms var(--ease-out) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .notif-badge {
+    animation: none;
+  }
+}
+
 /* ===========================================================================
    Buttons
 =========================================================================== */

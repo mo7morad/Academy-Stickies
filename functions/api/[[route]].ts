@@ -58,6 +58,7 @@ interface MemberRow {
   wall_public: number;
   created_at: number;
   last_login_at: number | null;
+  notifications_seen_at: number | null; // watermark for the red notification dot
   photo_key: string | null; // joined from profiles — the cohort photo
   thumb_key: string | null;
   session: string | null; // joined from profiles — AM/PM (learners)
@@ -127,14 +128,35 @@ function parseJson<T>(raw: string | null, fallback: T): T {
   }
 }
 
-function toMe(m: MemberRow): Me {
+/** Received notes newer than the member's own-wall watermark — the red-dot
+ *  count. A NULL watermark (never stamped) counts everything, but the 0009
+ *  migration stamps every existing member, so in practice it means "since you
+ *  last looked". */
+async function unreadCountFor(c: AppContext, m: MemberRow): Promise<number> {
+  const row = await c.env.DB.prepare(
+    `SELECT COUNT(*) AS n FROM stickies
+     WHERE recipient_id = ? AND created_at > ?`,
+  )
+    .bind(m.id, m.notifications_seen_at ?? 0)
+    .first<{ n: number }>();
+  return row?.n ?? 0;
+}
+
+function toMe(m: MemberRow, unreadCount: number): Me {
   return {
     id: m.id,
     name: m.name,
     email: m.email,
     avatarUrl: avatarUrl(m),
     wallPublic: m.wall_public === 1,
+    unreadCount,
   };
+}
+
+/** toMe with its notification count filled in — for the handful of routes that
+ *  hand the frontend a fresh Me. */
+async function meWithUnread(c: AppContext, m: MemberRow): Promise<Me> {
+  return toMe(m, await unreadCountFor(c, m));
 }
 
 /**
@@ -254,8 +276,20 @@ app.post("/request-link", async (c) => {
 // Current member
 // ---------------------------------------------------------------------------
 
-app.get("/me", requireAuth, (c) => {
-  return c.json(toMe(c.get("member")));
+app.get("/me", requireAuth, async (c) => {
+  return c.json(await meWithUnread(c, c.get("member")));
+});
+
+// Stamp "I've seen my wall" — clears the red notification dot. Cheap enough to
+// run on requireSession alone; the update needs only the member id.
+app.post("/me/seen", requireSession, async (c) => {
+  const meId = c.get("memberId");
+  await c.env.DB.prepare(
+    "UPDATE members SET notifications_seen_at = ? WHERE id = ?",
+  )
+    .bind(Date.now(), meId)
+    .run();
+  return c.json({ unreadCount: 0 });
 });
 
 app.patch("/me", requireAuth, async (c) => {
@@ -269,7 +303,7 @@ app.patch("/me", requireAuth, async (c) => {
   await c.env.DB.prepare("UPDATE members SET wall_public = ? WHERE id = ?")
     .bind(body.wallPublic ? 1 : 0, member.id)
     .run();
-  return c.json({ ...toMe(member), wallPublic: body.wallPublic });
+  return c.json({ ...(await meWithUnread(c, member)), wallPublic: body.wallPublic });
 });
 
 app.post("/me/avatar", requireAuth, async (c) => {
@@ -357,7 +391,7 @@ app.put("/me/profile", requireAuth, async (c) => {
     ),
   ]);
 
-  const me: Me = { ...toMe(member), name };
+  const me: Me = { ...(await meWithUnread(c, member)), name };
   const profile: Profile = {
     session: member.session ?? null,
     role: member.role ?? null,

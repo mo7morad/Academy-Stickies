@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { stripTags } from "../../shared/text";
 import type { Me, WallResponse } from "../../shared/types";
-import { deleteSticky, getWall, setWallPublic, uploadAvatar } from "../api";
+import {
+  deleteSticky,
+  getWall,
+  markNotificationsSeen,
+  setWallPublic,
+  uploadAvatar,
+} from "../api";
 import { Avatar } from "../components/Avatar";
 import { HeaderActions } from "../components/HeaderActions";
 import { Icon } from "../components/Icon";
@@ -102,6 +108,15 @@ export function Wall({
     load();
   }, [memberId, refreshSignal]);
 
+  // Opening your own wall is "I've seen my notes" — stamp the watermark and
+  // clear the red dot everywhere it's shown. Runs once per visit to /me.
+  useEffect(() => {
+    if (isSelf && me.unreadCount > 0) {
+      markNotificationsSeen();
+      onMeChange({ ...me, unreadCount: 0 });
+    }
+  }, [isSelf, memberId]);
+
   async function togglePublic(next: boolean) {
     try {
       const updated = await setWallPublic(next);
@@ -173,6 +188,7 @@ export function Wall({
             theme={theme}
             onToggleTheme={onToggleTheme}
             onLogout={isSelf ? onLogout : undefined}
+            unreadCount={me.unreadCount}
           />
         }
       />

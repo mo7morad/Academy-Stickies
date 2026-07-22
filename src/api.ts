@@ -41,6 +41,12 @@ export async function logout(): Promise<void> {
   await fetch("/api/logout", { method: "POST" });
 }
 
+/** Mark the current member's received notes as seen — clears the red dot.
+ *  Best-effort: a failed stamp just leaves the dot for next time. */
+export async function markNotificationsSeen(): Promise<void> {
+  await fetch("/api/me/seen", { method: "POST" }).catch(() => {});
+}
+
 export async function requestLink(
   email: string,
 ): Promise<{ sent: boolean; reason?: string }> {
