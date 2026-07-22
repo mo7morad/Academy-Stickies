@@ -217,10 +217,15 @@ export function Wall({
                 <h1 class="wall-hero__name">{wall.member.name}</h1>
 
                 <div class="wall-hero__meta">
+                  {profile?.role && (
+                    <span class="chip chip--session">{profile.role}</span>
+                  )}
                   {profile?.session && (
                     <span class="chip chip--session">{profile.session} session</span>
                   )}
-                  {isSelf && <span class="chip">{me.email}</span>}
+                  {isSelf && !me.email.endsWith("@no-email.invalid") && (
+                    <span class="chip">{me.email}</span>
+                  )}
                 </div>
 
                 {profile?.tagline && (
@@ -435,6 +440,9 @@ export function Wall({
             <Avatar name={wall.member.name} url={wall.member.avatarUrl} size="xl" eager />
             <div>
               <div class="profile-head__name">{wall.member.name}</div>
+              {profile.role && (
+                <div class="profile-head__role">{profile.role}</div>
+              )}
               {profile.session && (
                 <div class="profile-head__role">{profile.session} session</div>
               )}

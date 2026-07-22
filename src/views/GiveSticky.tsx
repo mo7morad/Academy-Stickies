@@ -44,12 +44,16 @@ export function GiveSticky({
           avatarUrl: mentor.photoUrl,
           thumbUrl: mentor.thumbUrl,
           wallPublic: true,
-          isSelf: false,
+          isSelf: mentor.id === me.id,
           receivedCount: 0,
           session: mentor.role,
           tagline: mentor.tagline,
         }));
-        setMembers([...m.filter((x) => !x.isSelf), ...mentorsAsMembers]);
+        // You can't give yourself a sticky — and a signed-in mentor now shows up
+        // in the mentor list, so filter by id, not just the roster's isSelf flag.
+        setMembers(
+          [...m, ...mentorsAsMembers].filter((x) => x.id !== me.id),
+        );
       })
       .catch(() => toast("Couldn't load members.", "error"));
   }, []);

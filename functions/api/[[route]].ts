@@ -60,7 +60,8 @@ interface MemberRow {
   last_login_at: number | null;
   photo_key: string | null; // joined from profiles — the cohort photo
   thumb_key: string | null;
-  session: string | null; // joined from profiles — AM/PM
+  session: string | null; // joined from profiles — AM/PM (learners)
+  role: string | null; // joined from profiles — "Tech Mentor" etc. (mentors)
 }
 
 type Variables = { member: MemberRow; memberId: string };
@@ -87,6 +88,13 @@ function siteOrigin(c: AppContext): string {
 
 function mediaUrl(key: string | null): string | null {
   return key ? `/api/media/${key}` : null;
+}
+
+// Mentors imported without a real email get a `<slug>@no-email.invalid`
+// placeholder so the members row is valid; nothing should ever try to mail it.
+const NO_EMAIL_DOMAIN = "@no-email.invalid";
+function isDeliverable(email: string | null | undefined): boolean {
+  return !!email && !email.endsWith(NO_EMAIL_DOMAIN);
 }
 
 /** A member's own upload wins; otherwise fall back to their cohort photo. */
@@ -160,7 +168,7 @@ async function requireAuth(c: AppContext, next: Next) {
   if (!memberId) return c.json({ error: "unauthorized" }, 401);
 
   const member = await c.env.DB.prepare(
-    `SELECT m.*, p.photo_key, p.thumb_key, p.session
+    `SELECT m.*, p.photo_key, p.thumb_key, p.session, p.role
      FROM members m LEFT JOIN profiles p ON p.member_id = m.id
      WHERE m.id = ?`,
   )
@@ -352,6 +360,7 @@ app.put("/me/profile", requireAuth, async (c) => {
   const me: Me = { ...toMe(member), name };
   const profile: Profile = {
     session: member.session ?? null,
+    role: member.role ?? null,
     tagline,
     intro,
     sections,
@@ -381,6 +390,8 @@ interface ProfileRow extends RosterRow {
   intro: string | null;
   sections: string | null;
   links: string | null;
+  role: string | null;
+  is_mentor: number | null;
 }
 
 interface StickyRow {
@@ -415,12 +426,15 @@ function toRosterMember(r: RosterRow, meId: string): RosterMember {
 // (photo, session, tagline). The prose is fetched per member.
 app.get("/members", requireSession, async (c) => {
   const meId = c.get("memberId");
+  // Mentors are members too, but they have their own directory (/mentors), so
+  // the learner roster leaves them out to avoid listing everyone twice.
   const rows = await c.env.DB.prepare(
     `SELECT m.id, m.name, m.avatar_key, m.wall_public,
             p.photo_key, p.thumb_key, p.session, p.tagline,
             (SELECT COUNT(*) FROM stickies s WHERE s.recipient_id = m.id) AS received_count
      FROM members m
      LEFT JOIN profiles p ON p.member_id = m.id
+     WHERE COALESCE(p.is_mentor, 0) = 0
      ORDER BY m.name COLLATE NOCASE ASC`,
   ).all<RosterRow>();
 
@@ -428,17 +442,22 @@ app.get("/members", requireSession, async (c) => {
   return c.json({ members });
 });
 
-// The directory itself is read-only — a mentor's wall and notes are fetched
-// per mentor by /members/:id, the same route learners' walls use.
+// The mentor directory. Mentors are members flagged is_mentor = 1; the cards
+// carry the role/skills this grid and its search show. A mentor's wall and
+// notes are fetched per mentor by /members/:id — the same route learners use.
 app.get("/mentors", requireSession, async (c) => {
   const rows = await c.env.DB.prepare(
-    `SELECT id, slug, name, nickname, role, skills, tagline, photo_key, thumb_key, intro, sections, links
-     FROM mentors
-     ORDER BY sort_order ASC, name COLLATE NOCASE ASC`,
+    `SELECT m.id, m.avatar_key, m.name,
+            p.slug, p.nickname, p.role, p.skills, p.tagline, p.photo_key, p.thumb_key, p.intro, p.sections, p.links
+     FROM members m
+     JOIN profiles p ON p.member_id = m.id
+     WHERE p.is_mentor = 1
+     ORDER BY COALESCE(p.sort_order, 2147483647) ASC, m.name COLLATE NOCASE ASC`,
   ).all<{
     id: string;
-    slug: string;
+    avatar_key: string | null;
     name: string;
+    slug: string;
     nickname: string | null;
     role: string | null;
     skills: string;
@@ -458,8 +477,9 @@ app.get("/mentors", requireSession, async (c) => {
     role: r.role,
     skills: parseJson<string[]>(r.skills, []),
     tagline: r.tagline,
-    photoUrl: mediaUrl(r.photo_key),
-    thumbUrl: mediaUrl(r.thumb_key ?? r.photo_key),
+    // A mentor who has uploaded their own avatar overrides the cohort photo.
+    photoUrl: avatarUrl(r),
+    thumbUrl: thumbUrl(r),
     intro: r.intro ?? "",
     sections: parseJson<ProfileSection[]>(r.sections, []),
     links: parseJson<ProfileLink[]>(r.links, []),
@@ -479,7 +499,7 @@ app.get("/members/:id", requireSession, async (c) => {
   const [memberRes, stickyRes] = await c.env.DB.batch<Record<string, unknown>>([
     c.env.DB.prepare(
       `SELECT m.id, m.name, m.avatar_key, m.wall_public,
-              p.photo_key, p.thumb_key, p.session, p.tagline, p.intro, p.sections, p.links,
+              p.photo_key, p.thumb_key, p.session, p.role, p.is_mentor, p.tagline, p.intro, p.sections, p.links,
               (SELECT COUNT(*) FROM stickies s WHERE s.recipient_id = m.id) AS received_count
        FROM members m
        LEFT JOIN profiles p ON p.member_id = m.id
@@ -496,56 +516,15 @@ app.get("/members/:id", requireSession, async (c) => {
     ).bind(id),
   ]);
 
-  let member = (memberRes.results?.[0] ?? null) as unknown as ProfileRow | null;
-  let isMentor = false;
+  const member = (memberRes.results?.[0] ?? null) as unknown as ProfileRow | null;
+  if (!member) return c.json({ error: "not found" }, 404);
 
-  if (!member) {
-    const mentor = await c.env.DB.prepare(
-      `SELECT id, slug, name, nickname, role, skills, tagline, photo_key, thumb_key, intro, sections, links, wall_public,
-              (SELECT COUNT(*) FROM stickies s WHERE s.recipient_id = mentors.id) AS received_count
-       FROM mentors
-       WHERE id = ?`,
-    )
-      .bind(id)
-      .first<{
-        id: string;
-        name: string;
-        nickname: string | null;
-        role: string | null;
-        skills: string;
-        tagline: string | null;
-        photo_key: string | null;
-        thumb_key: string | null;
-        intro: string | null;
-        sections: string;
-        links: string;
-        wall_public: number;
-        received_count: number;
-      }>();
-
-    if (!mentor) return c.json({ error: "not found" }, 404);
-
-    isMentor = true;
-    member = {
-      id: mentor.id,
-      name: mentor.name,
-      avatar_key: mentor.photo_key,
-      wall_public: mentor.wall_public,
-      photo_key: mentor.photo_key,
-      thumb_key: mentor.thumb_key,
-      session: mentor.role, // show role instead of AM/PM session
-      tagline: mentor.tagline,
-      intro: mentor.intro,
-      sections: mentor.sections,
-      links: mentor.links,
-      received_count: mentor.received_count,
-    };
-  }
+  // Mentors are members; the flag only steers presentation (the Mentors
+  // directory, the wall's Back button), never access.
+  const isMentor = member.is_mentor === 1;
 
   const isSelf = member.id === meId;
-  // Mentors read the same as learners here: a wall is private until its owner
-  // publishes it. They cannot sign in to flip the switch themselves, so the
-  // column is set for them — the API no longer decides on their behalf.
+  // A wall is private until its owner publishes it — the same for everyone.
   const visible = isSelf || member.wall_public === 1;
   const rosterMember = toRosterMember(member, meId);
 
@@ -554,6 +533,7 @@ app.get("/members/:id", requireSession, async (c) => {
   const profile: Profile | null = member.sections
     ? {
         session: member.session,
+        role: member.role,
         tagline: member.tagline,
         intro: member.intro ?? "",
         sections: parseJson<ProfileSection[]>(member.sections, []),
@@ -634,19 +614,12 @@ app.post("/stickies", requireAuth, async (c) => {
     return c.json({ error: "Write at least one of the two fields." }, 400);
   }
 
-  let recipient = await c.env.DB.prepare(
+  // Mentors are members now, so recipients — learner or mentor — are one lookup.
+  const recipient = await c.env.DB.prepare(
     "SELECT id, name, email FROM members WHERE id = ?",
   )
     .bind(recipientId)
     .first<{ id: string; name: string; email: string }>();
-
-  if (!recipient) {
-    recipient = await c.env.DB.prepare(
-      "SELECT id, name, email FROM mentors WHERE id = ?",
-    )
-      .bind(recipientId)
-      .first<{ id: string; name: string; email: string }>();
-  }
   if (!recipient) return c.json({ error: "recipient not found" }, 404);
 
   const stickyId = newId();
@@ -689,8 +662,9 @@ app.post("/stickies", requireAuth, async (c) => {
     )
     .run();
 
-  // Send an email notification asynchronously if configured
-  if (recipient.email) {
+  // Send an email notification asynchronously if configured (skip mentors who
+  // were imported without a real address — their placeholder can't be mailed).
+  if (isDeliverable(recipient.email)) {
     const authorNameForEmail = isAnonymous ? (pseudo?.name ?? "Someone") : me.name;
     const link = `${c.env.SITE_URL || "https://academy-stickies.pages.dev"}/me`;
     c.executionCtx.waitUntil(
@@ -798,16 +772,12 @@ app.get("/media/*", requireSession, async (c) => {
 
   if (key.startsWith("stickies/")) {
     const stickyId = key.slice("stickies/".length);
-    // A sticky can be addressed to a learner or to a mentor, and the two live
-    // in different tables. An inner join to `members` alone dropped every
-    // mentor-wall photo on the floor — the row came back empty and the note
-    // rendered a broken image — so both walls are looked up here.
+    // A sticky's recipient — learner or mentor — is a member, so its wall's
+    // visibility is one lookup.
     const row = await c.env.DB.prepare(
-      `SELECT s.author_id, s.recipient_id,
-              COALESCE(m.wall_public, x.wall_public) AS wall_public
+      `SELECT s.author_id, s.recipient_id, m.wall_public
        FROM stickies s
        LEFT JOIN members m ON m.id = s.recipient_id
-       LEFT JOIN mentors x ON x.id = s.recipient_id
        WHERE s.id = ?`,
     )
       .bind(stickyId)

@@ -23,7 +23,10 @@ function main() {
 
   console.log(`\nMagic links (${remote ? "remote" : "local"}) — base: ${base}\n`);
   for (const m of members) {
-    console.log(`• ${m.name} <${m.email}>`);
+    const email = m.email.endsWith("@no-email.invalid")
+      ? "no email on file"
+      : m.email;
+    console.log(`• ${m.name} <${email}>`);
     console.log(`  ${base}/api/auth?token=${m.login_token}\n`);
   }
 }

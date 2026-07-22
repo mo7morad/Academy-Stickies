@@ -17,6 +17,9 @@ export interface Me {
   email: string;
   avatarUrl: string | null;
   wallPublic: boolean;
+  /** Notes received since this member last opened their own wall — drives the
+   *  red notification dot. Cleared to 0 by viewing your wall. */
+  unreadCount: number;
 }
 
 /** One "## About Me"-style block from a cohort profile. Body is Markdown. */
@@ -30,18 +33,20 @@ export interface ProfileLink {
   url: string;
 }
 
-/** A learner's academy profile. Visible to any signed-in member: it introduces
+/** A member's academy profile. Visible to any signed-in member: it introduces
  *  them to the cohort, and is deliberately independent of wall visibility. */
 export interface Profile {
-  session: string | null; // "AM" | "PM"
+  session: string | null; // "AM" | "PM" (learners)
+  role: string | null; // "Tech Mentor" etc. (mentors); null for learners
   tagline: string | null;
   intro: string;
   sections: ProfileSection[];
   links: ProfileLink[];
 }
 
-/** A senior/mentor. Not a roster member — no sign-in — but they do have a wall
- *  and can be given stickies, so their wall is private until it is published. */
+/** A senior/mentor card for the Mentors directory. Mentors are full members now
+ *  (they sign in, own a wall, receive stickies) — this is just the directory
+ *  shape, carrying the role/skills the mentor grid and search show. */
 export interface Mentor {
   id: string;
   slug: string;

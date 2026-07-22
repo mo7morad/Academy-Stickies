@@ -14,7 +14,7 @@
  * normalizes headings enough to render them consistently.
  */
 import { execFileSync } from "node:child_process";
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import {
   existsSync,
   mkdirSync,
@@ -503,6 +503,12 @@ function readEntries(file: string): CohortEntry[] {
   return JSON.parse(readFileSync(file, "utf8")) as CohortEntry[];
 }
 
+/** A high-entropy magic-link token for a mentor's new member row (matches the
+ *  256-bit base64url tokens scripts/seed.ts mints for roster members). */
+function mentorToken(): string {
+  return randomBytes(32).toString("base64url");
+}
+
 function loadGroup(
   group: "learners" | "seniors",
   mediaSub: "learners" | "mentors",
@@ -589,20 +595,39 @@ function main() {
     );
   }
 
+  // Mentors are full members. Unlike learners (who are pre-seeded from the
+  // roster and only get a profile attached), a mentor isn't on the roster, so
+  // here we CREATE their member row — with its own login token — and then their
+  // profile, flagged is_mentor = 1. Both are keyed on email so a re-import keeps
+  // the same id (and thus their existing stickies) and login token. A mentor
+  // imported without an email gets a stable, non-deliverable placeholder.
   mentors.forEach((p, i) => {
+    const email = p.email || `${p.slug.toLowerCase()}@no-email.invalid`;
+    const emailSql = sqlQuote(email);
+
     sql.push(
-      `INSERT INTO mentors (id, slug, name, nickname, role, skills, tagline, photo_key, thumb_key, intro, sections, links, sort_order, updated_at, email)\n` +
-        `VALUES (${sqlQuote(randomUUID())}, ${sqlQuote(p.slug)}, ${sqlQuote(p.name)}, ` +
-        `${p.nickname ? sqlQuote(p.nickname) : "NULL"}, ${p.role ? sqlQuote(p.role) : "NULL"}, ` +
-        `${sqlQuote(JSON.stringify(p.skills))}, ${sqlQuote(p.tagline)}, ` +
-        `${p.photoKey ? sqlQuote(p.photoKey) : "NULL"}, ` +
-        `${p.thumbKey ? sqlQuote(p.thumbKey) : "NULL"}, ${sqlQuote(p.intro)}, ` +
-        `${sqlQuote(JSON.stringify(p.sections))}, ${sqlQuote(JSON.stringify(p.links))}, ${i}, ${now}, ${p.email ? sqlQuote(p.email) : "NULL"})\n` +
-        `ON CONFLICT(slug) DO UPDATE SET name=excluded.name, nickname=excluded.nickname, ` +
-        `role=excluded.role, skills=excluded.skills, tagline=excluded.tagline, ` +
+      `INSERT INTO members (id, name, email, login_token, wall_public, created_at)\n` +
+        `VALUES (${sqlQuote(randomUUID())}, ${sqlQuote(p.name)}, ${emailSql}, ` +
+        `${sqlQuote(mentorToken())}, 0, ${now})\n` +
+        `ON CONFLICT(email) DO UPDATE SET name = excluded.name;`,
+    );
+
+    sql.push(
+      `INSERT INTO profiles (member_id, slug, session, tagline, photo_key, thumb_key, intro, sections, links, updated_at, role, nickname, skills, sort_order, is_mentor)\n` +
+        `SELECT m.id, ${sqlQuote(p.slug)}, NULL, ${sqlQuote(p.tagline)}, ` +
+        `${p.photoKey ? sqlQuote(p.photoKey) : "NULL"}, ${p.thumbKey ? sqlQuote(p.thumbKey) : "NULL"}, ` +
+        `${sqlQuote(p.intro)}, ${sqlQuote(JSON.stringify(p.sections))}, ${sqlQuote(JSON.stringify(p.links))}, ${now}, ` +
+        `${p.role ? sqlQuote(p.role) : "NULL"}, ${p.nickname ? sqlQuote(p.nickname) : "NULL"}, ` +
+        `${sqlQuote(JSON.stringify(p.skills))}, ${i}, 1\n` +
+        `FROM members m WHERE lower(m.email) = ${emailSql}\n` +
+        `ON CONFLICT(member_id) DO UPDATE SET slug=excluded.slug, tagline=excluded.tagline, ` +
         `photo_key=excluded.photo_key, thumb_key=excluded.thumb_key, intro=excluded.intro, ` +
-        `sections=excluded.sections, links=excluded.links, sort_order=excluded.sort_order, ` +
-        `updated_at=excluded.updated_at, email=excluded.email;`,
+        `sections=excluded.sections, links=excluded.links, updated_at=excluded.updated_at, ` +
+        `role=excluded.role, nickname=excluded.nickname, skills=excluded.skills, ` +
+        `sort_order=excluded.sort_order, is_mentor=1\n` +
+        // A mentor who has edited their own profile in-app has edited_at set;
+        // leave their words (and role/skills) alone. Only untouched imports refresh.
+        `WHERE profiles.edited_at IS NULL;`,
     );
   });
 

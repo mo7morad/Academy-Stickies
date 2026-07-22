@@ -70,7 +70,15 @@ async function main() {
   );
 
   let ok = 0;
+  let skipped = 0;
   for (const m of members) {
+    // Mentors imported without a real address carry a placeholder that can't be
+    // mailed — hand them their link from `npm run links` instead.
+    if (m.email.endsWith("@no-email.invalid")) {
+      console.log(`— skip ${m.name}: no email on file`);
+      skipped++;
+      continue;
+    }
     const link = `${base}/api/auth?token=${m.login_token}`;
     if (dryRun) {
       console.log(`• would email ${m.name} <${m.email}>`);
@@ -91,7 +99,12 @@ async function main() {
     }
   }
 
-  if (!dryRun) console.log(`\nSent ${ok}/${members.length}.`);
+  if (!dryRun) {
+    console.log(`\nSent ${ok}/${members.length - skipped}.`);
+    if (skipped) {
+      console.log(`Skipped ${skipped} with no email — run \`npm run links\` for their links.`);
+    }
+  }
 }
 
 main();

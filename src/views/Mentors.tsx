@@ -8,8 +8,9 @@ import { navigate } from "../router";
 import { useToast } from "../toast";
 
 /**
- * The mentor directory. Mentors ("seniors") guide the cohort but are not roster
- * members: they have no wall and receive no stickies, so this view is read-only.
+ * The mentor directory. Mentors ("seniors") are full members — they sign in,
+ * own a wall and receive stickies like anyone else — but they keep their own
+ * directory here, apart from the learner roster. Tap one to open their wall.
  */
 export function Mentors() {
   const toast = useToast();
