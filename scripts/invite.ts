@@ -42,6 +42,9 @@ async function main() {
   loadDevVars();
   const remote = isRemote();
   const dryRun = process.argv.includes("--dry-run");
+  // Mentors joined after the learners were first onboarded, so `--mentors-only`
+  // sends just them their magic link without re-mailing the whole roster.
+  const mentorsOnly = process.argv.includes("--mentors-only");
   const base = siteUrl();
 
   const apiKey = process.env.BREVO_API_KEY;
@@ -57,7 +60,12 @@ async function main() {
   }
 
   const members = d1Query<MemberRow>(
-    "SELECT name, email, login_token FROM members ORDER BY name COLLATE NOCASE",
+    mentorsOnly
+      ? `SELECT m.name, m.email, m.login_token
+         FROM members m JOIN profiles p ON p.member_id = m.id
+         WHERE p.is_mentor = 1
+         ORDER BY m.name COLLATE NOCASE`
+      : "SELECT name, email, login_token FROM members ORDER BY name COLLATE NOCASE",
     remote,
   );
   if (members.length === 0) {
@@ -66,7 +74,7 @@ async function main() {
   }
 
   console.log(
-    `${dryRun ? "[dry-run] " : ""}Emailing ${members.length} member(s) — base ${base}\n`,
+    `${dryRun ? "[dry-run] " : ""}Emailing ${members.length} ${mentorsOnly ? "mentor" : "member"}(s) — base ${base}\n`,
   );
 
   let ok = 0;
