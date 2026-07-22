@@ -719,19 +719,29 @@ app.post("/stickies", requireAuth, async (c) => {
   return c.json({ sticky }, 201);
 });
 
-// The recipient can remove a sticky from their own wall.
+// Either end of a note can take it down: the recipient clears their own wall,
+// and the author retracts a note they gave. Anonymous notes store no author_id,
+// so only the recipient can remove those.
 app.delete("/stickies/:id", requireSession, async (c) => {
   const meId = c.get("memberId");
   const id = c.req.param("id");
 
   const sticky = await c.env.DB.prepare(
-    "SELECT id, recipient_id, photo_key FROM stickies WHERE id = ?",
+    "SELECT id, recipient_id, author_id, photo_key FROM stickies WHERE id = ?",
   )
     .bind(id)
-    .first<{ id: string; recipient_id: string; photo_key: string | null }>();
+    .first<{
+      id: string;
+      recipient_id: string;
+      author_id: string | null;
+      photo_key: string | null;
+    }>();
   if (!sticky) return c.json({ error: "not found" }, 404);
-  if (sticky.recipient_id !== meId) {
-    return c.json({ error: "You can only remove stickies from your own wall." }, 403);
+  if (sticky.recipient_id !== meId && sticky.author_id !== meId) {
+    return c.json(
+      { error: "You can only remove notes you gave or received." },
+      403,
+    );
   }
 
   await c.env.DB.prepare("DELETE FROM stickies WHERE id = ?").bind(id).run();

@@ -346,6 +346,8 @@ export function Wall({
                               key={s.id}
                               sticky={s}
                               subject={wall.member.name.split(" ")[0]}
+                              canDelete
+                              onDelete={removeSticky}
                             />
                           ))}
                         </div>
@@ -401,7 +403,9 @@ export function Wall({
                               subject={
                                 isSelf ? null : wall.member.name.split(" ")[0]
                               }
-                              canDelete={isSelf}
+                              // The recipient can clear any note; anyone else can
+                              // still retract the ones they wrote.
+                              canDelete={isSelf || s.mine}
                               onDelete={removeSticky}
                             />
                           ))}
