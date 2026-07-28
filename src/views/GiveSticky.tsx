@@ -30,6 +30,7 @@ export function GiveSticky({
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const pickerRef = useRef<HTMLDivElement>(null);
   /** The 200-face strip is a chooser, not a fixture: it is only on screen while
    *  there is still a choice to make. Arriving from someone's wall, the choice
    *  is already made and the note is what the writer came for. */
@@ -57,6 +58,22 @@ export function GiveSticky({
       })
       .catch(() => toast("Couldn't load members.", "error"));
   }, []);
+
+  useEffect(() => {
+    if (!picking || !recipientId) return;
+    function onPointerDown(e: PointerEvent) {
+      if (
+        searchRef.current &&
+        !searchRef.current.contains(e.target as Node) &&
+        pickerRef.current &&
+        !pickerRef.current.contains(e.target as Node)
+      ) {
+        setPicking(false);
+      }
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [picking, recipientId]);
 
   const photoUrl = useMemo(
     () => (photo ? URL.createObjectURL(photo) : null),
@@ -170,7 +187,7 @@ export function GiveSticky({
           {shown?.length === 0 ? (
             <p class="give__none">Nobody matched “{query}”.</p>
           ) : (
-            <div class="picker" role="listbox" aria-label="Recipient">
+            <div ref={pickerRef} class="picker" role="listbox" aria-label="Recipient">
               {shown?.map((m) => {
                 const selected = m.id === recipientId;
                 return (

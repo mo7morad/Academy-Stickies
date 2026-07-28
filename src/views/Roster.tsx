@@ -20,8 +20,9 @@ const view: {
   page: number;
   query: string;
   session: SessionFilter;
+  publicOnly: boolean;
   scrollY: number;
-} = { page: 1, query: "", session: "all", scrollY: 0 };
+} = { page: 1, query: "", session: "all", publicOnly: false, scrollY: 0 };
 
 export function Roster({
   refreshSignal,
@@ -34,6 +35,7 @@ export function Roster({
   const [members, setMembers] = useState<RosterMember[] | null>(null);
   const [query, setQuery] = useState(view.query);
   const [session, setSession] = useState<SessionFilter>(view.session);
+  const [publicOnly, setPublicOnly] = useState(view.publicOnly);
   const [page, setPage] = useState(view.page);
   const PAGE_SIZE = 24;
 
@@ -43,7 +45,8 @@ export function Roster({
     view.page = page;
     view.query = query;
     view.session = session;
-  }, [page, query, session]);
+    view.publicOnly = publicOnly;
+  }, [page, query, session, publicOnly]);
 
   useEffect(() => {
     return () => {
@@ -81,6 +84,7 @@ export function Roster({
     const q = query.trim().toLowerCase();
     return members.filter((m) => {
       if (session !== "all" && m.session !== session) return false;
+      if (publicOnly && !m.wallPublic && !m.isSelf) return false;
       if (!q) return true;
       // Taglines come from each member's own profile, so this searches both
       // who someone is and what they're about.
@@ -89,7 +93,7 @@ export function Roster({
         (m.tagline?.toLowerCase().includes(q) ?? false)
       );
     });
-  }, [members, query, session]);
+  }, [members, query, session, publicOnly]);
 
   const hasSessions = useMemo(
     () => members?.some((m) => m.session) ?? false,
@@ -105,7 +109,7 @@ export function Roster({
       return;
     }
     setPage(1);
-  }, [query, session]);
+  }, [query, session, publicOnly]);
 
   const totalPages = filtered ? Math.ceil(filtered.length / PAGE_SIZE) : 0;
 
@@ -133,6 +137,14 @@ export function Roster({
           aria-label="Search learners"
           onInput={(e) => setQuery((e.currentTarget as HTMLInputElement).value)}
         />
+        <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", flexShrink: 0, fontWeight: 600 }}>
+          <input 
+            type="checkbox" 
+            checked={publicOnly} 
+            onChange={(e) => setPublicOnly(e.currentTarget.checked)} 
+          />
+          Public walls only
+        </label>
         {hasSessions && (
           <Segmented<SessionFilter>
             value={session}
