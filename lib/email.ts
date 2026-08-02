@@ -242,3 +242,71 @@ export function stickyNotificationTemplate(
 
   return { subject, html, text };
 }
+
+export async function sendLetterNotification(
+  env: EmailEnv,
+  to: string,
+  recipientName: string,
+  authorName: string,
+  link: string,
+): Promise<void> {
+  if (!emailConfigured(env)) {
+    console.warn("Skipping letter email notification: email not configured");
+    return;
+  }
+  const res = await sendViaBrevo(
+    env,
+    to,
+    recipientName,
+    letterNotificationTemplate(recipientName, authorName, link),
+  );
+  if (!res.ok) {
+    const body = await res.text();
+    console.error(`Email send failed (${res.status}): ${body}`);
+  }
+}
+
+export function letterNotificationTemplate(
+  recipientName: string,
+  authorName: string,
+  link: string,
+): { subject: string; html: string; text: string } {
+  const safeRecipientName = escapeHtml(recipientName.split(" ")[0] || recipientName);
+  const safeAuthorName = escapeHtml(authorName);
+  const safeLink = escapeHtml(link);
+  const subject = `You received a sealed letter from ${safeAuthorName}!`;
+  const text = [
+    `Hi ${safeRecipientName},`,
+    "",
+    `You have received a new sealed envelope letter from ${safeAuthorName}!`,
+    "",
+    `Unseal and read your letter: ${link}`,
+    "",
+    "— Academy Stickies",
+  ].join("\n");
+
+  const html = `<!doctype html>
+<html>
+  <body style="margin:0;padding:0;background:#fdfbf7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fdfbf7;padding:32px 16px;">
+      <tr><td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:460px;background:#ffffff;border:3px solid #2d2d2d;border-radius:12px;overflow:hidden;box-shadow:4px 4px 0px 0px #2d2d2d;">
+          <tr><td style="padding:36px 32px 8px;text-align:center;font-size:44px;line-height:1;">✉️</td></tr>
+          <tr><td style="padding:8px 32px 0;text-align:center;">
+            <h1 style="margin:0;font-size:24px;font-weight:700;color:#2d2d2d;letter-spacing:-0.4px;">You've Got Mail!</h1>
+          </td></tr>
+          <tr><td style="padding:16px 32px 0;color:#2d2d2d;font-size:16px;line-height:1.5;">
+            Hi ${safeRecipientName}, <strong>${safeAuthorName}</strong> sent you a sealed envelope letter.
+          </td></tr>
+          <tr><td style="padding:28px 32px;text-align:center;">
+            <a href="${safeLink}" style="display:inline-block;background:#3b82f6;color:#ffffff;text-decoration:none;font-size:17px;font-weight:700;padding:12px 24px;border:3px solid #2d2d2d;border-radius:8px;box-shadow:2px 2px 0px 0px #2d2d2d;">Open Envelope</a>
+          </td></tr>
+        </table>
+      </td></tr>
+    </table>
+  </body>
+</html>`;
+
+  return { subject, html, text };
+}
+

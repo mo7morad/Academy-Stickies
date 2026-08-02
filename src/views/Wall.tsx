@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { stripTags } from "../../shared/text";
 import type { Me, WallResponse } from "../../shared/types";
 import {
+  deleteLetter,
   deleteSticky,
   getWall,
   markNotificationsSeen,
@@ -9,8 +10,10 @@ import {
   uploadAvatar,
 } from "../api";
 import { Avatar } from "../components/Avatar";
+import { Envelope } from "../components/Envelope";
 import { HeaderActions } from "../components/HeaderActions";
 import { Icon } from "../components/Icon";
+import { LetterReader } from "../components/LetterReader";
 import { Nav } from "../components/Nav";
 import { Pager } from "../components/Pager";
 import { ProfileBody } from "../components/ProfileBody";
@@ -35,6 +38,7 @@ export function Wall({
   memberId,
   refreshSignal,
   onGive,
+  onWriteLetter,
   onMeChange,
   onLogout,
   theme,
@@ -44,6 +48,7 @@ export function Wall({
   memberId: string;
   refreshSignal: number;
   onGive: (recipientId?: string) => void;
+  onWriteLetter?: (recipientId?: string) => void;
   onMeChange: (me: Me) => void;
   onLogout: () => void;
   theme: "light" | "dark";
@@ -55,11 +60,25 @@ export function Wall({
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [showProfile, setShowProfile] = useState(false);
+  const [activeLetter, setActiveLetter] = useState<import("../../shared/types").Letter | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const notesRef = useRef<HTMLElement>(null);
   const isSelf = memberId === me.id;
   /** Six rows of two on desktop, twelve stacked on a phone. */
   const PAGE_SIZE = 12;
+
+  async function removeLetter(id: string) {
+    try {
+      await deleteLetter(id);
+      setWall((w) =>
+        w ? { ...w, letters: (w.letters ?? []).filter((l) => l.id !== id) } : w,
+      );
+      if (activeLetter?.id === id) setActiveLetter(null);
+      toast("Letter removed.");
+    } catch {
+      toast("Couldn't remove that letter.", "error");
+    }
+  }
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -285,13 +304,24 @@ export function Wall({
                     </button>
                   )}
                   {!isSelf && (
-                    <button
-                      class="btn btn--filled"
-                      onClick={() => onGive(wall.member.id)}
-                    >
-                      <Icon name="plus" size={16} />
-                      Give a sticky
-                    </button>
+                    <>
+                      {onWriteLetter && (
+                        <button
+                          class="btn btn--tinted"
+                          onClick={() => onWriteLetter(wall.member.id)}
+                        >
+                          <span aria-hidden="true">✉️</span>
+                          Send a letter
+                        </button>
+                      )}
+                      <button
+                        class="btn btn--filled"
+                        onClick={() => onGive(wall.member.id)}
+                      >
+                        <Icon name="plus" size={16} />
+                        Give a sticky
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -441,11 +471,67 @@ export function Wall({
                     )}
                   </>
                 )}
+                {/* Sealed Envelope Letters Section */}
+                <div class="letters-section">
+                  <h2 class="wall-col__title">
+                    {isSelf
+                      ? "Sealed Letters · Private to You"
+                      : `Letters You Sent ${wall.member.name.split(" ")[0]}`}
+                    {wall.letters && wall.letters.length > 0 ? ` · ${wall.letters.length}` : ""}
+                  </h2>
+                  {wall.letters && wall.letters.length > 0 ? (
+                    <div class="letters-grid">
+                      {wall.letters.map((l) => (
+                        <Envelope
+                          key={l.id}
+                          letter={l}
+                          onClick={() => setActiveLetter(l)}
+                          canDelete={isSelf || l.mine}
+                          onDelete={removeLetter}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div class="empty empty--letters" style="padding: 24px var(--s4);">
+                      <div class="empty__emoji">✉️</div>
+                      <div class="empty__title">No sealed letters yet</div>
+                      <p>
+                        {isSelf
+                          ? "Private, sealed envelope letters sent to you will appear here."
+                          : `Send ${wall.member.name.split(" ")[0]} a private, sealed envelope letter.`}
+                      </p>
+                      {!isSelf && onWriteLetter && (
+                        <button
+                          class="btn btn--tinted"
+                          style="margin-top: 12px;"
+                          onClick={() => onWriteLetter(wall.member.id)}
+                        >
+                          ✉️ Write a Letter
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </section>
             </div>
           </>
         )}
       </main>
+
+      {activeLetter && (
+        <Sheet
+          title="Letter"
+          variant="bare"
+          onClose={() => setActiveLetter(null)}
+        >
+          <LetterReader
+            letter={activeLetter}
+            me={me}
+            onClose={() => setActiveLetter(null)}
+            onDelete={removeLetter}
+          />
+        </Sheet>
+      )}
 
       {showProfile && profile && wall && (
         <Sheet
