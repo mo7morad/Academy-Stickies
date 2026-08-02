@@ -200,7 +200,7 @@ export function Roster({
                   href={m.isSelf ? "#/me" : `#/m/${m.id}`}
                   title={m.tagline ? stripTags(m.tagline) : undefined}
                 >
-                  <Avatar name={m.name} url={m.thumbUrl} size="lg" eager={i < 8} />
+                  <Avatar name={m.name} url={m.thumbUrl} fullUrl={m.avatarUrl} size="lg" eager={i < 8} />
                   <div class="member-card__name">{m.isSelf ? "You" : m.name}</div>
                   {(m.isSelf || showsGlobe || showsNotes) && (
                     <div class="member-card__meta">

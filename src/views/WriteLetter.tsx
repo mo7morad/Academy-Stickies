@@ -157,7 +157,7 @@ export function WriteLetter({
         </div>
       ) : recipient && !picking ? (
         <div class="give__chosen">
-          <Avatar name={recipient.name} url={recipient.thumbUrl} size="lg" />
+          <Avatar name={recipient.name} url={recipient.thumbUrl} fullUrl={recipient.avatarUrl} size="lg" />
           <div class="give__chosen-text">
             <div class="give__chosen-eyebrow">Writing letter to</div>
             <div class="give__chosen-name">{recipient.name}</div>
@@ -199,7 +199,7 @@ export function WriteLetter({
                     class={`picker__item ${selected ? "picker__item--on" : ""}`}
                     onClick={() => choose(m.id)}
                   >
-                    <Avatar name={m.name} url={m.thumbUrl} size="md" />
+                    <Avatar name={m.name} url={m.thumbUrl} fullUrl={m.avatarUrl} size="md" />
                     <span class="picker__name">{m.name.split(" ")[0]}</span>
                   </button>
                 );

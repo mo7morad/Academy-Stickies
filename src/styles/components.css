@@ -609,6 +609,115 @@
 .avatar--md  { width: 46px;  height: 46px;  font-size: 17px; }
 .avatar--sm  { width: 34px;  height: 34px;  font-size: 13px; }
 
+.avatar--zoomable {
+  cursor: pointer;
+  transition: transform 180ms var(--ease-out), box-shadow 180ms var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .avatar--zoomable:hover {
+    transform: scale(1.05);
+    box-shadow: var(--shadow-md);
+  }
+}
+.avatar--zoomable:active {
+  transform: scale(0.96);
+}
+
+.sticky__photo--zoomable,
+.letter-paper__photo--zoomable {
+  cursor: pointer;
+  transition: transform 180ms var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .sticky__photo--zoomable:hover,
+  .letter-paper__photo--zoomable:hover {
+    transform: scale(1.02);
+  }
+}
+
+/* ===========================================================================
+   Avatar Lightbox Modal
+=========================================================================== */
+.avatar-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s4);
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  animation: avatar-modal-fade-in 220ms var(--ease-out) both;
+}
+
+.avatar-modal-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: min(92vw, 560px);
+  max-height: 88vh;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  animation: avatar-modal-pop 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.avatar-modal-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s3) var(--s4);
+  border-bottom: 1px solid var(--border-soft);
+  gap: var(--s3);
+}
+
+.avatar-modal-title {
+  font-size: var(--t-sub);
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.avatar-modal-close {
+  flex-shrink: 0;
+}
+
+.avatar-modal-body {
+  padding: var(--s4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  width: 100%;
+}
+
+.avatar-modal-img {
+  max-width: 100%;
+  max-height: 65vh;
+  object-fit: contain;
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-md);
+}
+
+@keyframes avatar-modal-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes avatar-modal-pop {
+  from { opacity: 0; transform: scale(0.92) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
 /* ===========================================================================
    Roster (Main Directory)
 

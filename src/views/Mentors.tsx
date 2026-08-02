@@ -73,7 +73,7 @@ export function Mentors() {
               onClick={() => navigate(`/m/${m.id}`)}
               aria-label={`Read ${m.name}'s profile`}
             >
-              <Avatar name={m.name} url={m.thumbUrl} size="lg" eager={i < 6} />
+              <Avatar name={m.name} url={m.thumbUrl} fullUrl={m.photoUrl} size="lg" eager={i < 6} />
               <div class="mentor-card__text">
                 <div class="mentor-card__name">{m.name}</div>
                 {m.role && <div class="mentor-card__role">{m.role}</div>}
