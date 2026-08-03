@@ -13,6 +13,7 @@ import {
 import {
   emailConfigured,
   sendFeedbackNotification,
+  sendLetterNotification,
   sendMagicLink,
   sendStickyNotification,
 } from "../../lib/email";
@@ -23,8 +24,16 @@ import {
 } from "../../lib/media";
 import { pseudonymFor } from "../../lib/pseudonym";
 import { sanitizeProfileInput } from "../../shared/profile";
-import { MAX_FIELD_LEN, STICKY_COLORS } from "../../shared/types";
+import {
+  LETTER_STYLES,
+  MAX_FIELD_LEN,
+  MAX_LETTER_BODY_LEN,
+  MAX_LETTER_SUBJECT_LEN,
+  STICKY_COLORS,
+} from "../../shared/types";
 import type {
+  Letter,
+  LetterStyle,
   Me,
   Mentor,
   Profile,
@@ -442,6 +451,23 @@ interface StickyRow {
   author_name: string | null;
 }
 
+interface LetterRow {
+  id: string;
+  recipient_id: string;
+  author_id: string | null;
+  is_anonymous: number;
+  subject: string;
+  body: string;
+  paper_style: string;
+  photo_key: string | null;
+  is_opened: number;
+  opened_at: number | null;
+  created_at: number;
+  anon_name: string | null;
+  anon_color: string | null;
+  author_name: string | null;
+}
+
 function toRosterMember(r: RosterRow, meId: string): RosterMember {
   return {
     id: r.id,
@@ -530,7 +556,7 @@ app.get("/members/:id", requireSession, async (c) => {
   // notes are *returned*), and a wall used to cost three serial D1 round trips
   // before it could paint. Fetching notes for a wall that turns out to be
   // private wastes one cheap indexed read; a second round trip cost more.
-  const [memberRes, stickyRes] = await c.env.DB.batch<Record<string, unknown>>([
+  const [memberRes, stickyRes, letterRes] = await c.env.DB.batch<Record<string, unknown>>([
     c.env.DB.prepare(
       `SELECT m.id, m.name, m.avatar_key, m.wall_public,
               p.photo_key, p.thumb_key, p.session, p.role, p.is_mentor, p.tagline, p.intro, p.sections, p.links,
@@ -548,6 +574,15 @@ app.get("/members/:id", requireSession, async (c) => {
        WHERE s.recipient_id = ?
        ORDER BY s.created_at DESC`,
     ).bind(id),
+    c.env.DB.prepare(
+      `SELECT l.id, l.recipient_id, l.author_id, l.is_anonymous, l.subject, l.body,
+              l.paper_style, l.photo_key, l.is_opened, l.opened_at, l.created_at,
+              l.anon_name, l.anon_color, a.name AS author_name
+       FROM letters l
+       LEFT JOIN members a ON a.id = l.author_id
+       WHERE l.recipient_id = ? AND (l.recipient_id = ? OR l.author_id = ?)
+       ORDER BY l.created_at DESC`,
+    ).bind(id, meId, meId),
   ]);
 
   const member = (memberRes.results?.[0] ?? null) as unknown as ProfileRow | null;
@@ -593,6 +628,28 @@ app.get("/members/:id", requireSession, async (c) => {
     createdAt: r.created_at,
   });
 
+  const letterRows = (letterRes.results ?? []) as unknown as LetterRow[];
+  const toLetter = (r: LetterRow): Letter => ({
+    id: r.id,
+    recipientId: r.recipient_id,
+    authorName:
+      r.is_anonymous === 1 ? (r.anon_name ?? "Anonymous") : r.author_name,
+    authorColor: r.is_anonymous === 1 ? r.anon_color : null,
+    isAnonymous: r.is_anonymous === 1,
+    mine: r.is_anonymous === 0 && r.author_id === meId,
+    subject: r.subject,
+    body: r.body,
+    paperStyle: (LETTER_STYLES as readonly string[]).includes(r.paper_style)
+      ? (r.paper_style as LetterStyle)
+      : "classic",
+    photoUrl: r.photo_key ? `/api/media/${r.photo_key}` : null,
+    isOpened: r.is_opened === 1,
+    openedAt: r.opened_at,
+    createdAt: r.created_at,
+  });
+
+  const letters: Letter[] = letterRows.map(toLetter);
+
   // A private wall hides the cohort's notes — but not the ones the viewer wrote
   // themselves. A note you gave someone is yours to keep seeing even after they
   // make their wall private. Anonymous notes store no author_id (anonymity is
@@ -605,6 +662,7 @@ app.get("/members/:id", requireSession, async (c) => {
       isMentor,
       visible: false,
       stickies: mine,
+      letters,
       profile,
     };
     return c.json(res);
@@ -618,6 +676,7 @@ app.get("/members/:id", requireSession, async (c) => {
     isMentor,
     visible: true,
     stickies,
+    letters,
     profile,
   };
   return c.json(res);
@@ -760,6 +819,161 @@ app.delete("/stickies/:id", requireSession, async (c) => {
 });
 
 // ---------------------------------------------------------------------------
+// Envelope Letters
+// ---------------------------------------------------------------------------
+
+app.post("/letters", requireAuth, async (c) => {
+  const me = c.get("member");
+  const body = await c.req.parseBody();
+
+  const recipientId = String(body["recipient_id"] ?? "");
+  const subject = String(body["subject"] ?? "").trim().slice(0, MAX_LETTER_SUBJECT_LEN);
+  const letterBody = String(body["body"] ?? "").trim().slice(0, MAX_LETTER_BODY_LEN);
+  const isAnonymous = String(body["is_anonymous"] ?? "") === "true";
+  const paperStyleRaw = String(body["paper_style"] ?? "classic");
+  const paperStyle = (LETTER_STYLES as readonly string[]).includes(paperStyleRaw)
+    ? paperStyleRaw
+    : "classic";
+
+  if (!recipientId) return c.json({ error: "recipient_id required" }, 400);
+  if (recipientId === me.id) {
+    return c.json({ error: "You can't send a letter to yourself." }, 400);
+  }
+  if (!letterBody) {
+    return c.json({ error: "Write something in your letter first." }, 400);
+  }
+
+  const recipient = await c.env.DB.prepare(
+    "SELECT id, name, email FROM members WHERE id = ?",
+  )
+    .bind(recipientId)
+    .first<{ id: string; name: string; email: string }>();
+  if (!recipient) return c.json({ error: "recipient not found" }, 404);
+
+  const letterId = newId();
+  const pseudo = isAnonymous ? pseudonymFor() : null;
+
+  let photoKey: string | null = null;
+  const photo = body["photo"];
+  if (photo instanceof File && photo.size > 0) {
+    const check = validateImage(photo, MAX_PHOTO_BYTES);
+    if (!check.ok) return c.json({ error: check.error }, 400);
+    photoKey = `letters/${letterId}`;
+    await c.env.MEDIA.put(photoKey, await photo.arrayBuffer(), {
+      httpMetadata: { contentType: photo.type },
+    });
+  }
+
+  const createdAt = Date.now();
+  await c.env.DB.prepare(
+    `INSERT INTO letters
+       (id, recipient_id, author_id, is_anonymous, subject, body, paper_style, photo_key, created_at, anon_name, anon_color)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  )
+    .bind(
+      letterId,
+      recipientId,
+      isAnonymous ? null : me.id,
+      isAnonymous ? 1 : 0,
+      subject,
+      letterBody,
+      paperStyle,
+      photoKey,
+      createdAt,
+      pseudo?.name ?? null,
+      isAnonymous ? pseudo?.color ?? null : null,
+    )
+    .run();
+
+  if (isDeliverable(recipient.email)) {
+    const authorNameForEmail = isAnonymous ? (pseudo?.name ?? "Someone") : me.name;
+    const link = `${c.env.SITE_URL || "https://academy-stickies.pages.dev"}/me`;
+    c.executionCtx.waitUntil(
+      sendLetterNotification(
+        c.env,
+        recipient.email,
+        recipient.name,
+        authorNameForEmail,
+        link,
+      ).catch(console.error),
+    );
+  }
+
+  const letter: Letter = {
+    id: letterId,
+    recipientId,
+    authorName: isAnonymous ? (pseudo?.name ?? "Anonymous") : me.name,
+    authorColor: pseudo?.color ?? null,
+    isAnonymous,
+    mine: !isAnonymous,
+    subject,
+    body: letterBody,
+    paperStyle: paperStyle as LetterStyle,
+    photoUrl: photoKey ? `/api/media/${photoKey}` : null,
+    isOpened: false,
+    openedAt: null,
+    createdAt,
+  };
+  return c.json({ letter }, 201);
+});
+
+app.post("/letters/:id/open", requireSession, async (c) => {
+  const meId = c.get("memberId");
+  const id = c.req.param("id");
+
+  const letter = await c.env.DB.prepare(
+    "SELECT id, recipient_id, is_opened, opened_at FROM letters WHERE id = ?",
+  )
+    .bind(id)
+    .first<{ id: string; recipient_id: string; is_opened: number; opened_at: number | null }>();
+
+  if (!letter) return c.json({ error: "not found" }, 404);
+  if (letter.recipient_id !== meId) {
+    return c.json({ error: "Only the recipient can open this letter." }, 403);
+  }
+
+  const now = Date.now();
+  if (letter.is_opened === 0) {
+    await c.env.DB.prepare(
+      "UPDATE letters SET is_opened = 1, opened_at = ? WHERE id = ?",
+    )
+      .bind(now, id)
+      .run();
+  }
+
+  return c.json({ ok: true, isOpened: true, openedAt: letter.opened_at ?? now });
+});
+
+app.delete("/letters/:id", requireSession, async (c) => {
+  const meId = c.get("memberId");
+  const id = c.req.param("id");
+
+  const letter = await c.env.DB.prepare(
+    "SELECT id, recipient_id, author_id, photo_key FROM letters WHERE id = ?",
+  )
+    .bind(id)
+    .first<{
+      id: string;
+      recipient_id: string;
+      author_id: string | null;
+      photo_key: string | null;
+    }>();
+  if (!letter) return c.json({ error: "not found" }, 404);
+  if (letter.recipient_id !== meId && letter.author_id !== meId) {
+    return c.json(
+      { error: "You can only delete letters you sent or received." },
+      403,
+    );
+  }
+
+  await c.env.DB.prepare("DELETE FROM letters WHERE id = ?").bind(id).run();
+  if (letter.photo_key) {
+    c.executionCtx.waitUntil(c.env.MEDIA.delete(letter.photo_key).catch(() => {}));
+  }
+  return c.json({ ok: true });
+});
+
+// ---------------------------------------------------------------------------
 // Feedback
 // ---------------------------------------------------------------------------
 
@@ -821,6 +1035,16 @@ app.get("/media/*", requireSession, async (c) => {
       row.recipient_id === meId ||
       row.author_id === meId ||
       row.wall_public === 1;
+    if (!allowed) return c.json({ error: "forbidden" }, 403);
+  } else if (key.startsWith("letters/")) {
+    const letterId = key.slice("letters/".length);
+    const row = await c.env.DB.prepare(
+      `SELECT author_id, recipient_id FROM letters WHERE id = ?`,
+    )
+      .bind(letterId)
+      .first<{ author_id: string | null; recipient_id: string }>();
+    if (!row) return c.json({ error: "not found" }, 404);
+    const allowed = row.recipient_id === meId || row.author_id === meId;
     if (!allowed) return c.json({ error: "forbidden" }, 403);
   } else if (!OPEN_MEDIA_PREFIXES.some((p) => key.startsWith(p))) {
     return c.json({ error: "not found" }, 404);

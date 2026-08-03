@@ -89,6 +89,32 @@ export interface Sticky {
   createdAt: number;
 }
 
+export const LETTER_STYLES = [
+  "classic",
+  "kraft",
+  "rose",
+  "midnight",
+  "sage",
+] as const;
+
+export type LetterStyle = (typeof LETTER_STYLES)[number];
+
+export interface Letter {
+  id: string;
+  recipientId: string;
+  authorName: string | null;
+  authorColor: string | null;
+  isAnonymous: boolean;
+  mine: boolean;
+  subject: string;
+  body: string;
+  paperStyle: LetterStyle;
+  photoUrl: string | null;
+  isOpened: boolean;
+  openedAt: number | null;
+  createdAt: number;
+}
+
 export interface WallResponse {
   member: RosterMember;
   isSelf: boolean;
@@ -96,6 +122,7 @@ export interface WallResponse {
   isMentor: boolean;
   visible: boolean; // false => private wall the viewer may not see
   stickies: Sticky[];
+  letters: Letter[]; // Sealed private letters for recipient or author
   profile: Profile | null; // shown even when the wall itself is private
 }
 
@@ -103,4 +130,11 @@ export interface CreateStickyResult {
   sticky: Sticky;
 }
 
+export interface CreateLetterResult {
+  letter: Letter;
+}
+
 export const MAX_FIELD_LEN = 280;
+export const MAX_LETTER_BODY_LEN = 4000;
+export const MAX_LETTER_SUBJECT_LEN = 120;
+

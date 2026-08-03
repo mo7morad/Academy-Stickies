@@ -205,3 +205,34 @@ export async function sendFeedback(message: string): Promise<{ ok: true }> {
     }),
   );
 }
+
+export interface NewLetter {
+  recipientId: string;
+  subject: string;
+  body: string;
+  paperStyle: string;
+  isAnonymous: boolean;
+  photo?: Blob | null;
+}
+
+export async function createLetter(input: NewLetter) {
+  const fd = new FormData();
+  fd.append("recipient_id", input.recipientId);
+  fd.append("subject", input.subject);
+  fd.append("body", input.body);
+  fd.append("paper_style", input.paperStyle);
+  fd.append("is_anonymous", String(input.isAnonymous));
+  if (input.photo) fd.append("photo", input.photo, "photo.webp");
+  return parse<{ letter: any }>(
+    await fetch("/api/letters", { method: "POST", body: fd }),
+  );
+}
+
+export async function markLetterOpened(id: string): Promise<{ ok: true; isOpened: boolean; openedAt: number }> {
+  return parse(await fetch(`/api/letters/${id}/open`, { method: "POST" }));
+}
+
+export async function deleteLetter(id: string): Promise<void> {
+  await parse(await fetch(`/api/letters/${id}`, { method: "DELETE" }));
+}
+

@@ -16,6 +16,7 @@ import { Mentors } from "./views/Mentors";
 import { Roster } from "./views/Roster";
 import { SendFeedback } from "./views/SendFeedback";
 import { Wall } from "./views/Wall";
+import { WriteLetter } from "./views/WriteLetter";
 
 type Theme = "light" | "dark";
 
@@ -74,6 +75,9 @@ export function App() {
   const [give, setGive] = useState<{ open: boolean; recipient?: string }>({
     open: false,
   });
+  const [letterState, setLetterState] = useState<{ open: boolean; recipient?: string }>({
+    open: false,
+  });
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [refresh, setRefresh] = useState(0);
 
@@ -106,8 +110,17 @@ export function App() {
     setGive({ open: true, recipient });
   }, []);
 
+  const openWriteLetter = useCallback((recipient?: string) => {
+    setLetterState({ open: true, recipient });
+  }, []);
+
   const onCreated = useCallback(() => {
     setGive({ open: false });
+    setRefresh((r) => r + 1);
+  }, []);
+
+  const onLetterCreated = useCallback(() => {
+    setLetterState({ open: false });
     setRefresh((r) => r + 1);
   }, []);
 
@@ -177,6 +190,7 @@ export function App() {
         memberId={memberId}
         refreshSignal={refresh}
         onGive={openGive}
+        onWriteLetter={openWriteLetter}
         onMeChange={setMe}
         onLogout={logout}
         theme={theme}
@@ -191,10 +205,16 @@ export function App() {
 
       <AppFooter onSendFeedback={openFeedback} />
 
-      <button class="fab" onClick={() => openGive()} aria-label="New sticky">
-        <Icon name="plus" size={20} />
-        New Sticky
-      </button>
+      <div class="fab-group">
+        <button class="fab fab--letter" onClick={() => openWriteLetter()} aria-label="Write letter">
+          <span aria-hidden="true" style="font-size: 16px;">✉️</span>
+          Write Letter
+        </button>
+        <button class="fab" onClick={() => openGive()} aria-label="New sticky">
+          <Icon name="plus" size={20} />
+          New Sticky
+        </button>
+      </div>
 
       {give.open && (
         <Sheet title="New Sticky" onClose={() => setGive({ open: false })}>
@@ -202,6 +222,16 @@ export function App() {
             me={me}
             prefillRecipientId={give.recipient}
             onCreated={onCreated}
+          />
+        </Sheet>
+      )}
+
+      {letterState.open && (
+        <Sheet title="Write Sealed Letter" onClose={() => setLetterState({ open: false })}>
+          <WriteLetter
+            me={me}
+            prefillRecipientId={letterState.recipient}
+            onCreated={onLetterCreated}
           />
         </Sheet>
       )}
