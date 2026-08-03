@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import { pickDailySpotlight } from "../../shared/daily";
 import { stripTags } from "../../shared/text";
 import type { RosterMember } from "../../shared/types";
 import { getMembers, invalidateMembers } from "../api";
 import { Avatar } from "../components/Avatar";
+import { DailySpotlight } from "../components/DailySpotlight";
 import { Segmented, Spinner } from "../components/controls";
 import { Icon } from "../components/Icon";
 import { Pager } from "../components/Pager";
@@ -27,9 +29,11 @@ const view: {
 export function Roster({
   refreshSignal,
   onGive,
+  onWriteLetter,
 }: {
   refreshSignal: number;
   onGive: (recipientId?: string) => void;
+  onWriteLetter: (recipientId?: string) => void;
 }) {
   const toast = useToast();
   const [members, setMembers] = useState<RosterMember[] | null>(null);
@@ -121,8 +125,26 @@ export function Roster({
   const rangeStart = (page - 1) * PAGE_SIZE + 1;
   const rangeEnd = Math.min(page * PAGE_SIZE, filtered?.length ?? 0);
 
+  const daily = useMemo(() => {
+    if (!members) return [];
+    const meId = members.find((m) => m.isSelf)?.id;
+    return pickDailySpotlight(members, { excludeId: meId }).map((m) => ({
+      id: m.id,
+      name: m.name,
+      thumbUrl: m.thumbUrl,
+      avatarUrl: m.avatarUrl,
+    }));
+  }, [members]);
+
   return (
     <main class="page">
+      <DailySpotlight
+        title="Today's learners"
+        people={daily}
+        onGive={(id) => onGive(id)}
+        onWriteLetter={(id) => onWriteLetter(id)}
+      />
+
       <p class="page__lede">
         Tap someone to read their profile and see their wall, or use{" "}
         <strong>New Sticky</strong> to leave a note.
