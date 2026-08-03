@@ -1,5 +1,7 @@
+import { useState } from "preact/hooks";
 import type { Sticky } from "../../shared/types";
 import { Icon } from "./Icon";
+import { ImageModal } from "./ImageModal";
 
 function rotationFor(id: string): number {
   // Deterministic tiny tilt for an organic, hand-placed feel.
@@ -23,6 +25,7 @@ export function StickyNote({
   canDelete?: boolean;
   onDelete?: (id: string) => void;
 }) {
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
   const anon = sticky.isAnonymous;
   const authorLabel = anon
     ? (sticky.authorName ?? "Anonymous")
@@ -52,7 +55,25 @@ export function StickyNote({
           </div>
         )}
         {sticky.photoUrl && (
-          <img class="sticky__photo" src={sticky.photoUrl} alt="" loading="lazy" />
+          <>
+            <img
+              class="sticky__photo sticky__photo--zoomable"
+              src={sticky.photoUrl}
+              alt=""
+              loading="lazy"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowPhotoModal(true);
+              }}
+            />
+            {showPhotoModal && (
+              <ImageModal
+                src={sticky.photoUrl}
+                alt="Sticky note photo"
+                onClose={() => setShowPhotoModal(false)}
+              />
+            )}
+          </>
         )}
         <div class="sticky__footer">
           <span class="sticky__author">

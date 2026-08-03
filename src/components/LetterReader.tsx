@@ -1,7 +1,8 @@
-import { useEffect } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import type { Letter, Me } from "../../shared/types";
 import { markLetterOpened } from "../api";
 import { Icon } from "./Icon";
+import { ImageModal } from "./ImageModal";
 import { Markdown } from "./Markdown";
 
 export function LetterReader({
@@ -21,6 +22,7 @@ export function LetterReader({
     }
   }, [letter.id, letter.isOpened, letter.recipientId, me.id]);
 
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
   const anon = letter.isAnonymous;
   const authorLabel = anon
     ? (letter.authorName ?? "Anonymous")
@@ -94,11 +96,22 @@ export function LetterReader({
         {letter.photoUrl && (
           <div class="letter-paper__photo-container">
             <img
-              class="letter-paper__photo"
+              class="letter-paper__photo letter-paper__photo--zoomable"
               src={letter.photoUrl}
               alt="Enclosed Photograph"
               loading="lazy"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowPhotoModal(true);
+              }}
             />
+            {showPhotoModal && (
+              <ImageModal
+                src={letter.photoUrl}
+                alt="Enclosed Photograph"
+                onClose={() => setShowPhotoModal(false)}
+              />
+            )}
           </div>
         )}
 

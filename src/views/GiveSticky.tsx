@@ -156,7 +156,7 @@ export function GiveSticky({
         // Who the note is for, said once and said plainly — a face and a full
         // name, not a highlighted thumbnail to pick back out of a crowd.
         <div class="give__chosen">
-          <Avatar name={recipient.name} url={recipient.thumbUrl} size="lg" />
+          <Avatar name={recipient.name} url={recipient.thumbUrl} fullUrl={recipient.avatarUrl} size="lg" />
           <div class="give__chosen-text">
             <div class="give__chosen-eyebrow">Writing to</div>
             <div class="give__chosen-name">{recipient.name}</div>
@@ -198,7 +198,7 @@ export function GiveSticky({
                     class={`picker__item ${selected ? "picker__item--on" : ""}`}
                     onClick={() => choose(m.id)}
                   >
-                    <Avatar name={m.name} url={m.thumbUrl} size="md" />
+                    <Avatar name={m.name} url={m.thumbUrl} fullUrl={m.avatarUrl} size="md" />
                     <span class="picker__name">{m.name.split(" ")[0]}</span>
                   </button>
                 );
