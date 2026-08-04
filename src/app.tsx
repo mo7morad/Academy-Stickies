@@ -163,9 +163,17 @@ export function App() {
         />
         <DirectoryTabs active={route.name} />
         {onMentors ? (
-          <Mentors />
+          <Mentors
+            meId={me.id}
+            onGive={openGive}
+            onWriteLetter={openWriteLetter}
+          />
         ) : (
-          <Roster refreshSignal={refresh} onGive={openGive} />
+          <Roster
+            refreshSignal={refresh}
+            onGive={openGive}
+            onWriteLetter={openWriteLetter}
+          />
         )}
       </>
     );

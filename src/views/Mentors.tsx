@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "preact/hooks";
+import { pickDailySpotlight } from "../../shared/daily";
 import { stripTags } from "../../shared/text";
 import type { Mentor } from "../../shared/types";
 import { getMentors } from "../api";
 import { Avatar } from "../components/Avatar";
+import { DailySpotlight } from "../components/DailySpotlight";
 import { Spinner } from "../components/controls";
 import { navigate } from "../router";
 import { useToast } from "../toast";
@@ -12,7 +14,15 @@ import { useToast } from "../toast";
  * own a wall and receive stickies like anyone else — but they keep their own
  * directory here, apart from the learner roster. Tap one to open their wall.
  */
-export function Mentors() {
+export function Mentors({
+  meId,
+  onGive,
+  onWriteLetter,
+}: {
+  meId: string;
+  onGive: (recipientId?: string) => void;
+  onWriteLetter: (recipientId?: string) => void;
+}) {
   const toast = useToast();
   const [mentors, setMentors] = useState<Mentor[] | null>(null);
   const [query, setQuery] = useState("");
@@ -37,8 +47,25 @@ export function Mentors() {
     );
   }, [mentors, query]);
 
+  const daily = useMemo(() => {
+    if (!mentors) return [];
+    return pickDailySpotlight(mentors, { excludeId: meId }).map((m) => ({
+      id: m.id,
+      name: m.name,
+      thumbUrl: m.thumbUrl,
+      avatarUrl: m.photoUrl,
+    }));
+  }, [mentors, meId]);
+
   return (
     <main class="page">
+      <DailySpotlight
+        title="Today's mentors"
+        people={daily}
+        onGive={(id) => onGive(id)}
+        onWriteLetter={(id) => onWriteLetter(id)}
+      />
+
       <p class="page__lede">
         The seniors who mentor this cohort. Tap anyone to read their profile and leave them a sticky note.
       </p>
