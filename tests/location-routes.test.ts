@@ -15,7 +15,7 @@ CREATE TABLE members (
   avatar_key TEXT, login_token TEXT NOT NULL UNIQUE,
   wall_public INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL, last_login_at INTEGER,
-  notifications_seen_at INTEGER
+  notifications_seen_at INTEGER, is_admin INTEGER NOT NULL DEFAULT 0, disabled_at INTEGER
 );
 CREATE TABLE profiles (
   member_id TEXT PRIMARY KEY,
@@ -29,7 +29,7 @@ CREATE TABLE profiles (
   role TEXT, nickname TEXT, skills TEXT NOT NULL DEFAULT '[]', sort_order INTEGER NOT NULL DEFAULT 0
 );
 CREATE TABLE stickies (
-  id TEXT PRIMARY KEY, recipient_id TEXT, created_at INTEGER NOT NULL
+  id TEXT PRIMARY KEY, recipient_id TEXT, created_at INTEGER NOT NULL, hidden_at INTEGER
 );`;
 
 /** Tiny D1Database stand-in over node:sqlite: the prepare/bind/run/first/all

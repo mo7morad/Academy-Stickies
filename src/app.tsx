@@ -12,6 +12,7 @@ import { navigate, useHashRoute } from "./router";
 import { EditProfile } from "./views/EditProfile";
 import { GiveSticky } from "./views/GiveSticky";
 import { Login } from "./views/Login";
+import { Admin } from "./views/Admin";
 import { Mentors } from "./views/Mentors";
 import { MapView } from "./views/MapView";
 import { Roster } from "./views/Roster";
@@ -176,6 +177,7 @@ export function App() {
               onToggleTheme={toggle}
               onLogout={logout}
               unreadCount={me.unreadCount}
+              isAdmin={me.isAdmin}
             />
           }
         />
@@ -196,6 +198,27 @@ export function App() {
           />
         )}
       </>
+    );
+  } else if (route.name === "admin") {
+    content = me.isAdmin ? (
+      <>
+        <Nav
+          title="Academy"
+          subtitle="Admin"
+          right={
+            <HeaderActions
+              theme={theme}
+              onToggleTheme={toggle}
+              onLogout={logout}
+              unreadCount={me.unreadCount}
+              isAdmin={me.isAdmin}
+            />
+          }
+        />
+        <Admin />
+      </>
+    ) : (
+      <Nav title="Academy" subtitle="Not found" />
     );
   } else if (route.name === "edit") {
     content = (
@@ -248,7 +271,7 @@ export function App() {
 
       <AppFooter onSendFeedback={openFeedback} />
 
-      {route.name !== "map" && (
+      {route.name !== "admin" && route.name !== "map" && (
         <div class="fab-group">
           <button class="fab fab--letter" onClick={() => openWriteLetter()} aria-label="Write letter">
             <span aria-hidden="true" style="font-size: 16px;">✉️</span>
